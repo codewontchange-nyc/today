@@ -122,6 +122,17 @@ export function mountDaybook(root, bridge = {}) {
 .db-setup-card .db-eyebrow{display:flex;align-items:center;gap:6px}.db-setup-card .db-eyebrow svg{width:13px;height:13px;color:var(--db-terracotta)}
 .db-setup-card strong{display:block;margin-top:7px;font-family:var(--db-serif);font-weight:400;font-size:19px;line-height:1.2;color:var(--db-ink)}
 .db-setup-go{display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:12.5px;color:var(--db-ink-2)}.db-setup-card:hover .db-ob-arr{transform:translateX(4px)}
+.db-promptwrap{position:relative}
+.db-whom{position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);width:min(440px,92%);padding:16px 16px 12px;border-radius:16px;border:1px solid var(--db-hair-2);background:var(--db-card);box-shadow:var(--db-shadow-lift);z-index:6;text-align:left;animation:db-whom-in .45s var(--db-glide) both}
+@keyframes db-whom-in{from{opacity:0;transform:translate(-50%,10px) scale(.98)}to{opacity:1;transform:translate(-50%,0)}}
+.db-whom strong{display:block;margin-top:4px;font-family:var(--db-serif);font-weight:400;font-size:21px;line-height:1.2;color:var(--db-ink)}
+.db-whom-list{display:grid;gap:6px;margin-top:12px}
+.db-whom-list button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:11px;border:1px solid var(--db-hair-2);text-align:left;transition:border-color .25s var(--db-ease),transform .4s var(--db-spring),background .25s}
+.db-whom-list button:hover,.db-whom-list button:focus-visible{border-color:var(--db-ink);transform:translateY(-1px)}
+.db-whom-list b{font-weight:500;font-size:14px;color:var(--db-ink)}.db-whom-list span{font-size:12px;color:var(--db-muted)}.db-whom-list .new b{font-weight:400;color:var(--db-ink-2)}
+.db-whom .db-ob-link{display:inline-block;margin-top:10px}
+.db-person{display:block;margin-bottom:7px}.db-person b{font-weight:500}.db-person small{display:block;font-size:11.5px;line-height:1.45;color:var(--db-muted)}
+.db-tag small{margin-left:4px;font-size:11px;color:var(--db-muted)}
 .db-sky{--sky-ink:rgba(32,44,39,.8);--sky-clay:#cf8a6a;--sky-sage:#a9b8a3;--sky-ochre:#dcb978;--sky-paper:#fbfaf6;position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;color:var(--sky-ink)}
 .db-sky.dark{--sky-ink:rgba(239,243,233,.78);--sky-clay:#b5745a;--sky-sage:#7f9079;--sky-ochre:#b89a5e;--sky-paper:#dcd6c8}
 .db-bird{position:absolute;width:calc(var(--bw)*var(--s,1));height:auto;opacity:.6;overflow:visible;animation:db-bird-fly var(--dur) linear var(--delay) infinite}
@@ -311,6 +322,10 @@ export function mountDaybook(root, bridge = {}) {
   const OB_READY = ['Reading your calendars', 'Checking each account', 'Looking for related mail', 'Preparing your notes'];
   let ob = null, obTimer = 0, obTickTimer = 0, demoData = null, booted = false;
   const PREVIEW_SERVICES = () => [...CAL, ...MAIL].map(([id]) => ({id, available: true, connected: false, accounts: []}));
+  let newer = '';
+  const vnum = v => String(v || '').split('.').map(n => parseInt(n, 10) || 0);
+  const isNewer = (a0, b0) => { const x = vnum(a0), y = vnum(b0); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+  async function checkLatest(){ try { const v = bridge.latest ? await bridge.latest() : ''; if (v && bridge.version && isNewer(v, bridge.version)) { newer = v; render({only: 'left'}); } } catch {} }
   const SETUP_STEPS = ['calendars', 'mail', 'you', 'look'];
   const setupLeft = () => SETUP_STEPS.filter(k => prefs.setup?.[k] !== 'done');
   function resumeSetup(){ beginOnboarding(); ob.step = 'calendars'; ob.resume = true; render(); }
@@ -414,7 +429,7 @@ export function mountDaybook(root, bridge = {}) {
     try { if (bridge.resetApp) await bridge.resetApp(); } catch (err) { showToast(err.message || 'The app could not be cleared.'); return; }
     if (!bridge.resetApp) { try { Object.keys(localStorage).filter(k => k.startsWith('daybook-')).forEach(k => localStorage.removeItem(k)); } catch {} }
     prefs = {dismissed: [], hiddenEvents: [], theme: 'auto', onboarded: false, owner: person?.id || '', setup: {}, accepted: []};
-    interests = {reading: [], topics: [], near: ''}; docs = {}; plans = []; accepted.clear(); hidden.clear(); ideaCache = []; ideaKey = '';
+    interests = {reading: [], topics: [], near: ''}; docs = {}; plans = []; people = []; accepted.clear(); hidden.clear(); ideaCache = []; ideaKey = '';
     if (!bridge.load) { demoData = demoData || data; services = PREVIEW_SERVICES(); }
     data = null; lastError = ''; setupDismissed = false;
     await savePrefs().catch(() => {});
@@ -635,6 +650,111 @@ export function mountDaybook(root, bridge = {}) {
     return evs.sort((a,b)=>Math.abs(c(a)-mid)-Math.abs(c(b)-mid))[0];
   }
   const anchorKey = loc => /salon 94|e(ast)? 89th/i.test(loc||'') ? 'ues' : /starr st|bushwick|11237/i.test(loc||'') ? 'bushwick' : '';
+  // ---- Smart contacts: who you mean, from your calendars, your notes and a lookup; remembered once confirmed ----
+  const PEOPLE_KEY = 'daybook-people';
+  let people = [], whom = null, indexFor = null, indexCache = [];
+  const RESP = /\s+(accepted|no reply|declined|tentative|needs action|needsaction|maybe)\s*$/i;
+  const capName = t => String(t).trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const selfNames = () => new Set(['cam', 'cameron', 'me', 'myself', firstName().toLowerCase()].filter(Boolean));
+  function peopleIndex(){
+    if (indexFor === data) return indexCache;
+    const map = new Map(), self = selfNames();
+    const addP = (raw, x, email) => {
+      const name = String(raw || '').replace(RESP, '').trim();
+      if (name.length < 3 || /\d|@|\(|\bgroup\b|\broom\b/i.test(name)) return;
+      const parts = name.split(/\s+/), first = parts[0].toLowerCase(); if (self.has(first)) return;
+      const key = name.toLowerCase(), q = map.get(key) || {id: 'cal:' + key, key, name, first, last: parts.slice(1).join(' ').toLowerCase(), email: '', events: [], source: 'calendar'};
+      if (email && !q.email) q.email = email;
+      if (x && !q.events.some(v => v.id === x.id)) q.events.push({id: x.id, date: x.date, title: x.title, location: x.location || ''});
+      map.set(key, q);
+    };
+    for (const x of (data?.events || [])) {
+      const org = String(x.organizer || ''), local = /@/.test(org) && !/group\.calendar|resource\.calendar/.test(org) ? org.split('@')[0].toLowerCase() : '';
+      for (const part of String(x.people || '').split(/,\s*/).filter(Boolean)) { const n = part.replace(RESP, '').trim(); addP(n, x, local && n.toLowerCase().split(/\s+/)[0] === local.split(/[._-]/)[0] ? org : ''); }
+      for (const m of String(x.title || '').matchAll(/\b(?:with|w\/)\s+([A-Z][a-z'’-]+(?:\s+[A-Z][a-z'’-]+)?)/g)) addP(m[1], x, local && m[1].toLowerCase().startsWith(local.slice(0, 3)) ? org : '');
+    }
+    indexFor = data; indexCache = [...map.values()];
+    return indexCache;
+  }
+  async function loadPeople(){ try { const v = bridge.loadPeople ? await bridge.loadPeople() : JSON.parse(localStorage.getItem(PEOPLE_KEY) || '[]'); if (Array.isArray(v)) people = v; } catch {} }
+  async function savePeople(){ people = people.slice(-300); if (bridge.savePeople) await bridge.savePeople(people); else localStorage.setItem(PEOPLE_KEY, JSON.stringify(people)); }
+  function remember(q, alias){
+    const id = q.id && !String(q.id).startsWith('cal:') ? q.id : 'p:' + String(q.name).toLowerCase();
+    let c = people.find(x => x.id === id || x.name.toLowerCase() === String(q.name).toLowerCase());
+    if (!c) { c = {id, name: q.name, email: q.email || '', detail: q.detail || '', source: q.source || 'calendar', aliases: [], at: new Date().toISOString()}; people.push(c); }
+    if (alias && alias !== c.name.toLowerCase() && !c.aliases.includes(alias)) c.aliases.push(alias);
+    if (q.email && !c.email) c.email = q.email;
+    savePeople().catch(() => {});
+    return c;
+  }
+  function knownEvents(q){ const k = String(q.name || '').toLowerCase(); return (peopleIndex().find(v => v.key === k)?.events || []).slice().sort((a, b) => b.date.localeCompare(a.date)); }
+  function personDetail(q){
+    const ev = knownEvents(q), next = ev.filter(v => v.date >= today).pop(), last = ev.find(v => v.date < today);
+    const bits = [q.email || '', next ? `Next: ${next.title} · ${shortDate(next.date)}` : last ? `Last: ${last.title} · ${shortDate(last.date)}` : ''].filter(Boolean);
+    return bits.join(' · ') || q.detail || (q.source === 'contacts' ? 'In your contacts' : q.source === 'memory' ? 'From what Bonsai knows' : 'New to Today');
+  }
+  const NOT_PEOPLE = new Set('me my myself someone somebody people friends friend team work everyone everybody them him her us you family kids the a an some coffee lunch dinner brunch breakfast drinks drink tea food time today tonight tomorrow week weekend morning afternoon evening night monday tuesday wednesday thursday friday saturday sunday mon tue tues wed thu thurs fri sat sun next this at on in for of our to about all email emails it that what yoga gym'.split(' '));
+  const REL_WORDS = /^(mom|mum|dad|mother|father|sister|brother|grandma|grandpa|grandmother|grandfather|aunt|uncle|wife|husband|partner|girlfriend|boyfriend|roommate|cousin|son|daughter)$/i;
+  function isKnownName(w){ const l = w.toLowerCase(); return people.some(q => q.name.toLowerCase().split(/\s+/)[0] === l || (q.aliases || []).includes(l)) || peopleIndex().some(q => q.first === l); }
+  function findMentions(text){
+    const out = [], seen = new Set(), push = m => { const k = m.toLowerCase(); if (!seen.has(k) && !selfNames().has(k.split(' ')[0])) { seen.add(k); out.push(m); } };
+    for (const m of String(text).matchAll(/\b(?:with|w\/|and|meet(?:ing)?|see(?:ing)?|call(?:ing)?|text(?:ing)?|invite|visit(?:ing)?|ping|thank)\s+((?:[A-Za-z][A-Za-z'’.-]+)(?:\s+[A-Za-z][A-Za-z'’.-]+)?)/g)) {
+      const words = m[1].split(/\s+/).map(w => w.replace(/[’']s$/, '')), keep = [];
+      for (const w of words) { const l = w.toLowerCase(); if (NOT_PEOPLE.has(l) || /^\d/.test(l)) break; if (keep.length && !/^[A-Z]/.test(w) && !isKnownName(keep[0] + ' ' + w)) break; keep.push(w); }
+      if (!keep.length || keep[0].length < 3) continue;
+      const cand = keep.join(' ');
+      if (REL_WORDS.test(keep[0]) || /^[A-Z]/.test(keep[0]) || isKnownName(keep[0])) push(cand);
+    }
+    for (const w of String(text).split(/[^A-Za-z'’]+/)) { if (w.length >= 3 && !NOT_PEOPLE.has(w.toLowerCase()) && isKnownName(w) && !out.some(m => m.toLowerCase().split(' ').includes(w.toLowerCase()))) push(w); }
+    return out.slice(0, 3);
+  }
+  async function resolveOne(m){
+    const ml = m.toLowerCase(), first = ml.split(' ')[0];
+    const cached = people.filter(q => q.name.toLowerCase() === ml || (q.aliases || []).includes(ml));
+    if (cached.length === 1) return cached[0];
+    const fromIndex = peopleIndex().filter(q => q.key === ml || q.first === ml || (q.last && q.last === ml) || (!ml.includes(' ') && ml.length >= 3 && q.first.startsWith(ml)));
+    const byName = new Map();
+    for (const q of [...cached, ...people.filter(q => q.name.toLowerCase().split(/\s+/)[0] === first), ...fromIndex]) { const k = q.name.toLowerCase(); if (!byName.has(k)) byName.set(k, q); }
+    const opts = [...byName.values()].map(q => ({id: q.id, name: q.name, email: q.email || '', source: q.source || 'calendar', detail: personDetail(q)}));
+    if (opts.length === 1) return remember(opts[0], ml);
+    if (opts.length > 1) return {ask: opts.slice(0, 5)};
+    if (REL_WORDS.test(m)) return remember({name: capName(m), source: 'you'}, ml);
+    if (bridge.whois) {
+      setWorking(`Looking for ${capName(m)}…`);
+      try { const found = (await bridge.whois({name: m, known: peopleIndex().slice(0, 60).map(q => ({name: q.name, email: q.email}))}))?.people || []; if (found.length) return {ask: found.slice(0, 5).map(f => ({id: 'p:' + String(f.name).toLowerCase(), name: f.name, email: f.email || '', source: f.source || 'lookup', detail: [f.email, f.detail].filter(Boolean).join(' · ') || 'Found in your mail'}))}; } catch {} finally { setWorking(''); }
+      return {ask: [], unknown: true};
+    }
+    return {ask: [], unknown: true};
+  }
+  function askWhom(m, options, unknown){ return new Promise(res => { whom = {mention: m, options, unknown: !!unknown, res}; render({only: 'right'}); setTimeout(() => shell.querySelector('.db-whom button')?.focus({preventScroll: true}), 30); }); }
+  function settleWhom(choice){
+    const w0 = whom; if (!w0) return; whom = null; render({only: 'right'});
+    if (choice === 'skip') return w0.res(false);
+    if (choice === 'new') return w0.res(remember({name: capName(w0.mention), source: 'you'}, w0.mention.toLowerCase()));
+    const q = w0.options[Number(choice)]; w0.res(q ? remember(q, w0.mention.toLowerCase()) : false);
+  }
+  async function resolvePeople(value){
+    const out = [];
+    for (const m of findMentions(value)) { let r = await resolveOne(m); if (r && r.ask) r = await askWhom(m, r.ask, r.unknown); if (r) out.push(r); }
+    return out;
+  }
+  function whomView(){
+    const w0 = whom, first = capName(w0.mention);
+    return `<div class="db-whom" role="dialog" aria-label="Who do you mean?"><p class="db-eyebrow">${w0.options.length ? 'Who do you mean?' : 'New to Today'}</p><strong>${w0.options.length ? `Which ${e(first)}?` : `Who is ${e(first)}?`}</strong><div class="db-whom-list">${w0.options.map((o, i) => `<button data-action="whom:${i}"><b>${e(o.name)}</b><span>${e(o.detail || o.email || '')}</span></button>`).join('')}<button class="new" data-action="whom:new"><b>${w0.options.length ? 'Someone else' : `Remember ${e(first)}`}</b><span>${w0.options.length ? `Remember “${e(first)}” as someone new` : 'Today will know who you mean next time'}</span></button></div><button class="db-ob-link" data-action="whom:skip">Skip</button></div>`;
+  }
+  const withWho = who => who && who.length ? ` with ${who.map(q => q.name.split(/\s+/)[0]).join(' and ')}` : '';
+  function stripPeople(text, who){
+    let t = String(text);
+    for (const q of who || []) for (const n of [q.name, ...(q.aliases || []), q.name.split(/\s+/)[0]]) { const r = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); t = t.replace(new RegExp(`\\b(?:with|w\\/|and)?\\s*${r}(?:[’']s)?\\b`, 'gi'), ' '); }
+    return t.replace(/\s+/g, ' ').trim();
+  }
+  function personAnchor(who){ for (const q of who || []) { const ev = knownEvents(q).find(v => v.location); if (ev) return {title: ev.title, location: ev.location}; } return null; }
+  function peopleLine(x){
+    return String(x.people || '').split(/,\s*/).map(s0 => s0.replace(RESP, '').trim()).filter(Boolean).map(n => {
+      const q = peopleIndex().find(v => v.key === n.toLowerCase()), c = people.find(v => v.name.toLowerCase() === n.toLowerCase()), other = (q?.events || []).filter(v => v.id !== x.id).sort((a, b) => b.date.localeCompare(a.date)), mail = c?.email || q?.email || '';
+      return `<span class="db-person"><b>${e(n)}</b>${mail ? `<small>${e(mail)}</small>` : ''}${other.length ? `<small>Also ${other.slice(0, 2).map(v => shortDate(v.date)).join(', ')}${other.length > 2 ? ` and ${other.length - 2} more` : ''}</small>` : ''}</span>`;
+    }).join('');
+  }
   const DAYN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   function parseWhen(text){
     const t = ' ' + text.toLowerCase().replace(/[’']/g, "'") + ' ', now = date(today).getUTCDay();
@@ -711,16 +831,20 @@ export function mountDaybook(root, bridge = {}) {
     contextDraft = ''; contextHint = '';
     if (PREP.test(value) && ev) return prepEvent(value, ev);
     if (CHANGE.test(value) && ev && !/\bmove more\b/i.test(value)) return changeEvent(value, ev, w);
-    if (BLOCK_LEAD.test(value) && !MOVE.test(value)) return blockRequest(value, w);
-    if (MOVE.test(value)) { bridge.context?.(value).catch(() => {}); return createTimePlan(value, moveCfg(value, w)); }
-    if (MUSEUM.test(value) || FOOD.test(value) || PLACE.test(value)) { bridge.context?.(value).catch(() => {}); const r = rangeFor(value, w); if (r) return createResearch(value, r); render(); showToast(`No open time ${w.days ? dayWord(w.days[0]) : 'today'} for that. Try another day.`); return; }
-    if (ASK.test(value)) return answerDay(value, w);
-    if (BLOCK_CUE.test(value) || w.duration || (w.at != null && w.days)) return blockRequest(value, w);
-    return keepNote(value);
+    if (whom) settleWhom('skip');
+    const wantsPlace = MUSEUM.test(value) || FOOD.test(value) || PLACE.test(value), isAsk = ASK.test(value) && !BLOCK_LEAD.test(value) && !MOVE.test(value) && !wantsPlace;
+    const who = isAsk || !findMentions(value).length ? [] : await resolvePeople(value);
+    if (BLOCK_LEAD.test(value) && !MOVE.test(value)) return blockRequest(value, w, who);
+    if (MOVE.test(value)) { bridge.context?.(value).catch(() => {}); const cfg = moveCfg(stripPeople(value, who), w); if (who.length) { const nm = cfg.name; cfg.name = k => nm(k) + withWho(who); cfg.title += withWho(who); } return createTimePlan(value, cfg); }
+    if (wantsPlace) { bridge.context?.(value).catch(() => {}); const r = rangeFor(value, w); if (r) return createResearch(value, r, who); render(); showToast(`No open time ${w.days ? dayWord(w.days[0]) : 'today'} for that. Try another day.`); return; }
+    if (isAsk) return answerDay(value, w);
+    if (BLOCK_CUE.test(value) || w.duration || (w.at != null && w.days)) return blockRequest(value, w, who);
+    return keepNote(value, who);
   }
-  async function keepNote(value){
-    if (bridge.context) await bridge.context(value); else data.notes.push({id: 'local-' + Date.now(), date: today, time: clock(new Date()), type: 'context', title: 'For later', body: value});
-    render(); showToast(bridge.context ? 'Kept for your agent.' : 'Kept in this preview only.');
+  async function keepNote(value, who = []){
+    const about = who.length ? ` (about ${who.map(q => q.name + (q.email ? ' <' + q.email + '>' : '')).join(', ')})` : '';
+    if (bridge.context) await bridge.context(value + about); else data.notes.push({id: 'local-' + Date.now(), date: today, time: clock(new Date()), type: 'context', title: who.length ? `For later${withWho(who).replace(' with ', ' · ')}` : 'For later', body: value});
+    render(); showToast(`${bridge.context ? 'Kept for your agent' : 'Kept in this preview only'}${who.length ? ` · about ${who.map(q => q.name).join(' and ')}` : ''}.`);
   }
   function openNewEvent(d, a, b, name){
     if (stacks.right.length) stacks.right = [];
@@ -729,8 +853,8 @@ export function mountDaybook(root, bridge = {}) {
     fill(); setTimeout(fill, 60);
     showToast(`${name}, ${dayWord(d)} at ${time(hm(a))}. Check it, then Add to calendar.`);
   }
-  async function blockRequest(value, w){
-    const name = blockTitle(value), len = w.duration || (/deep work|heads? ?down/i.test(value) ? 120 : /focus/i.test(value) ? 90 : /\bread/i.test(value) ? 45 : 60);
+  async function blockRequest(value, w, who = []){
+    const base = blockTitle(stripPeople(value, who)), name = who.length ? (base === 'Hold' ? `Time${withWho(who)}` : `${base}${withWho(who)}`) : base, len = w.duration || (/deep work|heads? ?down/i.test(value) ? 120 : /focus/i.test(value) ? 90 : /\bread/i.test(value) ? 45 : 60);
     if (w.at != null) { const d = (w.days && w.days[0]) || (w.at > mins(clock(new Date())) ? today : tomorrow); return openNewEvent(d, w.at, w.at + len, name); }
     const one = w.days && w.days.length === 1;
     return createTimePlan(value, {kind: 'block', days: w.days, windows: w.part ? [[w.part[0], w.part[1], w.partName]] : [[540, 1080, 'day']], count: one ? 3 : 4, len: () => len, fallback: w.duration ? null : [60, 45].filter(n => n < len), name: () => name, title: `${name}, ${durLabel(len)}`, noun: /^(read|write|call|run|walk|think|plan|study|practice|draw|paint|cook|journal|meditate)$/i.test(name) ? `open times to ${name.toLowerCase()}` : `open times for ${name.toLowerCase()}`, working: `Finding ${durLabel(len)} for ${name.toLowerCase()}`, body: () => `${durLabel(len)} open on every calendar. Accept adds a private block.`});
@@ -761,11 +885,11 @@ export function mountDaybook(root, bridge = {}) {
     const days = w.days && !(w.days.length === 1 && w.days[0] === ev.date) ? w.days : [1, 2, 3].map(k => add(ev.date, k));
     return createTimePlan(value, {kind: 'move-event', calendar: cal(ev.sourceId), days, windows: w.part ? [[w.part[0], w.part[1], w.partName]] : [[540, 1080, 'day']], count: 4, len: () => len, name: () => `Hold · ${ev.title}`, title: `New times for ${ev.title}`, noun: 'open times that fit', working: `Finding times for ${ev.title}`, after: own ? 'Accept holds one; then move the event in your calendar.' : 'Accept holds one privately so you can propose it. Today does not move meetings with other people.', body: () => own ? 'Open on every calendar.' : 'Open on every calendar. Today does not move meetings with other people.'});
   }
-  async function createResearch(text, r){
+  async function createResearch(text, r, who = []){
     const category = MUSEUM.test(text) ? 'museum' : FOOD.test(text) ? 'restaurant' : 'place', noun = category === 'restaurant' && /\b(drinks?|bar)\b/i.test(text) ? 'places for a drink' : category === 'restaurant' && /\b(coffee|caf[eé])\b/i.test(text) ? 'coffee spots' : {museum:'museums', restaurant:'places to eat', place:'places'}[category];
-    const anchor = anchorFor(r), anchorLabel = anchor ? anchor.location.split(',')[0] : (interests.near || '');
+    const anchor = anchorFor(r) || personAnchor(who), anchorLabel = anchor ? anchor.location.split(',')[0] : (interests.near || '');
     const pid = 'r' + Date.now().toString(36), when = `${shortDate(r.date)}, ${time(r.start)} to ${time(r.end)}`;
-    const plan = {id:pid, kind:'research', text, day:today, at:clock(new Date()), range:r, category, noun, anchorLabel, anchor: anchor ? {title:anchor.title, location:anchor.location} : null, status:'researching', title:`${cap(noun)}${anchorLabel?' near '+anchorLabel:''}`, reply:'Looking into this.', replyBody:`${cap(noun)}${anchorLabel?' near '+anchorLabel:''} for ${when}. I will share options after a deeper look.`, items:[]};
+    const plan = {id:pid, kind:'research', text, day:today, at:clock(new Date()), range:r, category, noun, anchorLabel, anchor: anchor ? {title:anchor.title, location:anchor.location} : null, status:'researching', people: who.map(q => ({name: q.name, email: q.email || ''})), title:`${cap(noun)}${withWho(who)}${anchorLabel?' near '+anchorLabel:''}`, reply:'Looking into this.', replyBody:`${cap(noun)}${anchorLabel?' near '+anchorLabel:''} for ${when}. I will share options after a deeper look.`, items:[]};
     plans.push(plan); await savePlans();
     setWorking(`Looking into ${noun}…`);
     agentAt(shell.querySelector('form.db-context'), 0.1, 0.5, true);
@@ -910,7 +1034,7 @@ export function mountDaybook(root, bridge = {}) {
     const notes = [...timed.filter(t=>t.kind==='reply').slice(-1), ...mine, ...rest.filter(t=>!mine.includes(t))].slice(0, setupLeft().length ? 2 : 3).map(t=>`<div class="db-notewrap"><button class="db-note ${t.x.type==='reply'?'reply':''} ${t.x.working?'working':''} ${fresh.has(t.x.id)?'db-fresh':''}" data-action="${t.x.type==='reply'?'plan:'+e(t.x.planId):'note:'+e(t.x.id)}"><span class="db-eyebrow"><i style="background-position:${t.x.type==='artifact'?'38%':t.x.type==='reply'?'15%':'70%'} 50%"></i>${t.x.type==='artifact'?'Prepared':t.x.type==='rest'?'Suggestion':t.x.type==='reply'?'From your agent':'Note'}</span><strong>${e(t.x.title)}</strong><span class="db-clamp">${e(t.x.body)}</span>${t.x.artifact?`<span class="db-link">${ic('doc')}${e(t.x.label||'Open brief')}</span>`:''}${t.x.type==='reply'?`<span class="db-link">${(plans.find(p=>p.id===t.x.planId)?.kind||'research')!=='research'?'See the times':'See the plan'}</span>`:''}</button><button class="db-x" data-action="dismiss:${e(t.x.id)}" aria-label="Dismiss" title="Dismiss">×</button></div>`).join('');
     const upcoming = events.filter(v=>v.e>nowMin).length, biggest = gaps.slice().sort((a,b)=>(b[1]-b[0])-(a[1]-a[0]))[0];
     const allLine = [...markers.map(x=>x.title), ...allDay.map(x=>x.title)];
-    return `<section class="db-left" aria-label="Today"><header class="db-head"><p class="db-eyebrow">${label(today,{weekday:'long'})} · ${label(today,{month:'long',day:'numeric',year:'numeric'})}</p><h1 class="db-title">Today</h1><p class="db-sub"><span><b>${upcoming}</b> still ahead</span>${biggest?`<span>Open from <b>${time(hm(biggest[0]))}</b> to <b>${time(hm(biggest[1]))}</b></span>`:''}</p>${allLine.length?`<p class="db-allday">All day · ${e(allLine.join(' · '))}</p>`:''}<div class="db-tools"><button class="db-icon" data-action="theme-toggle" aria-pressed="${isDark()}" aria-label="${isDark()?'Light mode':'Dark mode'}" title="${isDark()?'Light mode':'Dark mode'}">${ic(isDark()?'sun':'moon')}</button><button class="db-icon" data-action="interests" aria-label="Interests and reading">${ic('leaf')}</button><button class="db-icon" data-action="menu" aria-label="Calendars and sources" aria-expanded="${menu}">${ic('more')}</button></div></header>${menu?menuView():''}<div class="db-today"><div class="db-plot" data-rs="${rs}" data-re="${re}">${hours}<div class="db-track">${open}<div class="db-sel" ${pendingRange&&pendingRange.date===today?`style="top:${pct(mins(pendingRange.start))}%;height:${(mins(pendingRange.end)-mins(pendingRange.start))/total*100}%"`:'hidden'}><span>${pendingRange&&pendingRange.date===today?`${time(pendingRange.start)} to ${time(pendingRange.end)}`:''}</span></div>${placed.length?blocks:`<p class="db-empty">Nothing timed in your visible calendars today.${hidden.size?' Some calendars are hidden.':''}</p>`}</div><div class="db-notes">${setupLeft().length ? `<button class="db-setup-card" data-action="setup-resume"><span class="db-eyebrow">${ic('spark')}Setup · ${4 - setupLeft().length} of 4 done</span><strong>Finish setting up Today</strong><span class="db-setup-go">Continue<span class="db-ob-arr" aria-hidden="true">→</span></span></button>` : ''}${notes}<div class="db-plinth" aria-hidden="true">${scene('stones')}</div></div>${nowMin>=rs&&nowMin<=re?`<div class="db-now" style="top:${pct(nowMin)}%"><span>${time(clock(new Date()))}</span></div>`:''}</div></div></section>`;
+    return `<section class="db-left" aria-label="Today"><header class="db-head"><p class="db-eyebrow">${label(today,{weekday:'long'})} · ${label(today,{month:'long',day:'numeric',year:'numeric'})}</p><h1 class="db-title">Today</h1><p class="db-sub"><span><b>${upcoming}</b> still ahead</span>${biggest?`<span>Open from <b>${time(hm(biggest[0]))}</b> to <b>${time(hm(biggest[1]))}</b></span>`:''}</p>${allLine.length?`<p class="db-allday">All day · ${e(allLine.join(' · '))}</p>`:''}<div class="db-tools"><button class="db-icon" data-action="theme-toggle" aria-pressed="${isDark()}" aria-label="${isDark()?'Light mode':'Dark mode'}" title="${isDark()?'Light mode':'Dark mode'}">${ic(isDark()?'sun':'moon')}</button><button class="db-icon" data-action="interests" aria-label="Interests and reading">${ic('leaf')}</button><button class="db-icon" data-action="menu" aria-label="Calendars and sources" aria-expanded="${menu}">${ic('more')}</button></div></header>${menu?menuView():''}<div class="db-today"><div class="db-plot" data-rs="${rs}" data-re="${re}">${hours}<div class="db-track">${open}<div class="db-sel" ${pendingRange&&pendingRange.date===today?`style="top:${pct(mins(pendingRange.start))}%;height:${(mins(pendingRange.end)-mins(pendingRange.start))/total*100}%"`:'hidden'}><span>${pendingRange&&pendingRange.date===today?`${time(pendingRange.start)} to ${time(pendingRange.end)}`:''}</span></div>${placed.length?blocks:`<p class="db-empty">Nothing timed in your visible calendars today.${hidden.size?' Some calendars are hidden.':''}</p>`}</div><div class="db-notes">${newer ? `<div class="db-setup-card db-update"><span class="db-eyebrow">${ic('spark')}Update · ${e(newer)}</span><strong>A new version of Today is ready</strong><span class="db-setup-go">In App Store, open Sources, then today, and press Check for updates.</span></div>` : ''}${setupLeft().length ? `<button class="db-setup-card" data-action="setup-resume"><span class="db-eyebrow">${ic('spark')}Setup · ${4 - setupLeft().length} of 4 done</span><strong>Finish setting up Today</strong><span class="db-setup-go">Continue<span class="db-ob-arr" aria-hidden="true">→</span></span></button>` : ''}${notes}<div class="db-plinth" aria-hidden="true">${scene('stones')}</div></div>${nowMin>=rs&&nowMin<=re?`<div class="db-now" style="top:${pct(nowMin)}%"><span>${time(clock(new Date()))}</span></div>`:''}</div></div></section>`;
   }
   function itemLarge(t, crowded){
     const x = t.x;
@@ -963,7 +1087,7 @@ export function mountDaybook(root, bridge = {}) {
   }
   function aheadView(){
     const tabs = [['3','3 days'],['7','Week'],['month','Month']];
-    return `<section class="db-right" aria-label="Looking ahead"><header class="db-head">${busy?'<i class="db-progress" aria-hidden="true"></i>':''}<p class="db-eyebrow">${isBack(view,page[view])?'What you learned':'Plan gently'}</p><div class="db-headrow"><h2 class="db-title" data-back="${isBack(view,page[view])}">${isBack(view,page[view])?'Looking back':'Looking ahead'}</h2><div class="db-views" role="tablist" aria-label="Looking ahead range" style="--tab:${tabs.findIndex(t=>t[0]===view)}">${tabs.map(([v,l])=>`<button role="tab" aria-selected="${v===view}" data-action="view:${v}" tabindex="${v===view?0:-1}">${l}</button>`).join('')}<i aria-hidden="true"></i></div><div class="db-tools"><span class="db-range" aria-live="polite"></span><button class="db-icon" data-action="previous" aria-label="Previous">${ic('left')}</button><button class="db-icon" data-action="next" aria-label="Next">${ic('right')}</button></div></div></header><div class="db-pager" tabindex="0" aria-roledescription="carousel" aria-label="Looking ahead. Swipe or use the arrow keys to move between pages."><div class="db-rail">${pages()}</div></div><div class="db-promptwrap"><form class="db-context"><input name="context" value="${e(contextDraft)}" aria-label="Leave context for the agent" placeholder="${e(contextHint||'Ask for something, like a museum Saturday afternoon…')}" autocomplete="off" maxlength="1000"><button type="submit" aria-label="Save context">${ic('up')}</button></form></div><footer class="db-foot"><span>${busy?'Updating…':e(sourceLine())}</span><button data-action="status">${data.snapshot?'Snapshot':'Updated'} · ${new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}).format(new Date(data.fetchedAt||Date.now()))}</button></footer></section>`;
+    return `<section class="db-right" aria-label="Looking ahead"><header class="db-head">${busy?'<i class="db-progress" aria-hidden="true"></i>':''}<p class="db-eyebrow">${isBack(view,page[view])?'What you learned':'Plan gently'}</p><div class="db-headrow"><h2 class="db-title" data-back="${isBack(view,page[view])}">${isBack(view,page[view])?'Looking back':'Looking ahead'}</h2><div class="db-views" role="tablist" aria-label="Looking ahead range" style="--tab:${tabs.findIndex(t=>t[0]===view)}">${tabs.map(([v,l])=>`<button role="tab" aria-selected="${v===view}" data-action="view:${v}" tabindex="${v===view?0:-1}">${l}</button>`).join('')}<i aria-hidden="true"></i></div><div class="db-tools"><span class="db-range" aria-live="polite"></span><button class="db-icon" data-action="previous" aria-label="Previous">${ic('left')}</button><button class="db-icon" data-action="next" aria-label="Next">${ic('right')}</button></div></div></header><div class="db-pager" tabindex="0" aria-roledescription="carousel" aria-label="Looking ahead. Swipe or use the arrow keys to move between pages."><div class="db-rail">${pages()}</div></div><div class="db-promptwrap">${whom ? whomView() : ''}<form class="db-context"><input name="context" value="${e(contextDraft)}" aria-label="Leave context for the agent" placeholder="${e(contextHint||'Ask for something, like a museum Saturday afternoon…')}" autocomplete="off" maxlength="1000"><button type="submit" aria-label="Save context">${ic('up')}</button></form></div><footer class="db-foot"><span>${busy?'Updating…':e(sourceLine())}</span><button data-action="status">${data.snapshot?'Snapshot':'Updated'} · ${new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}).format(new Date(data.fetchedAt||Date.now()))}</button></footer></section>`;
   }
   function sourceLine(){
     const p = data.coverage?.providers || [];
@@ -1111,7 +1235,7 @@ export function mountDaybook(root, bridge = {}) {
     if (kind === 'event') {
       const x = (data.events||[]).find(n=>n.id===id) || {id, title:'No longer on your calendar', date:today}; const c = cal(x.sourceId);
       const link = x.url && /^https?:\/\//.test(x.url) ? x.url : '';
-      const facts = [['When', `${longDate(x.date)}<br>${span(x)}${x.start&&TZ_SHORT?' '+TZ_SHORT:''}`], x.location?['Where', e(x.location)]:null, x.organizer?['Host', e(x.organizer)]:null, x.people?['With', e(x.people)]:null, imported(x)?['Status','Imported feed. Attendance unknown.']:hold(x)?['Status','Hold. Not confirmed.']:null, link?['Link', `<a href="${e(link)}" target="_blank" rel="noreferrer">Join the meeting</a>`]:null].filter(Boolean);
+      const facts = [['When', `${longDate(x.date)}<br>${span(x)}${x.start&&TZ_SHORT?' '+TZ_SHORT:''}`], x.location?['Where', e(x.location)]:null, x.organizer?['Host', e(x.organizer)]:null, x.people?['With', peopleLine(x)]:null, imported(x)?['Status','Imported feed. Attendance unknown.']:hold(x)?['Status','Hold. Not confirmed.']:null, link?['Link', `<a href="${e(link)}" target="_blank" rel="noreferrer">Join the meeting</a>`]:null].filter(Boolean);
       const found = (x.context||[]).map(cx=>`<p>${e(cx.text)}</p>`).join('');
       const mail = (data.coverage?.providers||[]).filter(p=>p.kind==='mail'), checked = mail.some(p=>p.status==='checked');
       const pastEv = x.date < today, norm = t => String(t||'').toLowerCase().replace(/\(.*?\)/g,'').replace(/[\d:]+/g,'').replace(/\s+/g,' ').trim();
@@ -1163,7 +1287,7 @@ export function mountDaybook(root, bridge = {}) {
     }
     if (kind === 'interests') {
       const tags = list => (interests[list]||[]).map((v,i)=>`<span class="db-tag">${e(v)}<button data-action="untag:${list}:${i}" aria-label="Remove ${e(v)}">×</button></span>`).join('');
-      const html = `<div class="db-interests"><section><h2>Reading now</h2><p class="db-doc-hint">Books you are in the middle of. Your agent finds quiet time for them.</p><div class="db-tags">${tags('reading')}</div><form class="db-add" data-list="reading"><input name="v" maxlength="160" placeholder="Add a book, like Piranesi by Susanna Clarke" aria-label="Add a book you are reading"><button type="submit">Add</button></form></section><section><h2>Interests</h2><p class="db-doc-hint">Topics and things you enjoy. Used for book and place ideas.</p><div class="db-tags">${tags('topics')}</div><form class="db-add" data-list="topics"><input name="v" maxlength="80" placeholder="Add an interest, like architecture or live jazz" aria-label="Add an interest"><button type="submit">Add</button></form></section><section><h2>Usually around</h2><p class="db-doc-hint">A neighborhood, so ideas stay close when your calendar has no location.</p><form class="db-add" data-list="near"><input name="v" maxlength="120" value="${e(interests.near||'')}" placeholder="Like Fort Greene, Brooklyn" aria-label="Neighborhood you are usually in"><button type="submit">Save</button></form></section></div>`;
+      const html = `<div class="db-interests"><section><h2>Reading now</h2><p class="db-doc-hint">Books you are in the middle of. Your agent finds quiet time for them.</p><div class="db-tags">${tags('reading')}</div><form class="db-add" data-list="reading"><input name="v" maxlength="160" placeholder="Add a book, like Piranesi by Susanna Clarke" aria-label="Add a book you are reading"><button type="submit">Add</button></form></section><section><h2>Interests</h2><p class="db-doc-hint">Topics and things you enjoy. Used for book and place ideas.</p><div class="db-tags">${tags('topics')}</div><form class="db-add" data-list="topics"><input name="v" maxlength="80" placeholder="Add an interest, like architecture or live jazz" aria-label="Add an interest"><button type="submit">Add</button></form></section><section><h2>People</h2><p class="db-doc-hint">Who Today knows you mean, from your calendars and what you confirmed. Remove anyone it got wrong.</p><div class="db-tags">${people.map((q,i)=>`<span class="db-tag" title="${e(personDetail(q))}">${e(q.name)}${(q.aliases||[]).length?` <small>${e(q.aliases.join(', '))}</small>`:''}<button data-action="forget:${i}" aria-label="Forget ${e(q.name)}">×</button></span>`).join('') || '<span class="db-doc-hint">No one yet. Mention someone in a request, like coffee with Dan.</span>'}</div></section><section><h2>Usually around</h2><p class="db-doc-hint">A neighborhood, so ideas stay close when your calendar has no location.</p><form class="db-add" data-list="near"><input name="v" maxlength="120" value="${e(interests.near||'')}" placeholder="Like Fort Greene, Brooklyn" aria-label="Neighborhood you are usually in"><button type="submit">Save</button></form></section></div>`;
       return {key:'interests', kind, editable:false, kicker:'Interests', title:'What you are into', dek:'Your agent uses this to suggest books, reading time, and places near where you will be during a break.', byline:'Private to you', agenda:html, foot:'Ideas stay quiet and never go on your calendar unless you hold them.'};
     }
     const tone = {checked:'#5f7d63',waiting:'#c79a4b',unavailable:'#a9532e',failed:'#a9532e'};
@@ -1278,6 +1402,8 @@ export function mountDaybook(root, bridge = {}) {
     else if (a === 'ob-back') obBack();
     else if (a === 'ob-finish') obFinish();
     else if (a === 'setup-resume') resumeSetup();
+    else if (a.startsWith('whom:')) settleWhom(a.slice(5));
+    else if (a.startsWith('forget:')) { const q = people[Number(a.slice(7))]; if (q) { people = people.filter(v => v !== q); savePeople().catch(() => {}); render({only: 'left'}); showToast(`Forgot ${q.name}.`); } }
     else if (a.startsWith('ob-chip:')) { const t = a.slice(8); if (ob.picks.has(t)) ob.picks.delete(t); else ob.picks.add(t); b.setAttribute('aria-pressed', String(ob.picks.has(t))); }
     else if (a.startsWith('ob-look:')) setTheme(a.slice(8));
     else if (a === 'theme-toggle') setTheme(isDark() ? 'light' : 'dark');
@@ -1300,6 +1426,7 @@ export function mountDaybook(root, bridge = {}) {
   });
   shell.addEventListener('keydown', ev => { const tab = ev.target.closest?.('[role="tab"]'); if (!tab || !['ArrowLeft','ArrowRight'].includes(ev.key)) return; const order = ['3','7','month'], i = order.indexOf(view); setView(order[(i + (ev.key==='ArrowRight'?1:2)) % 3]); });
   shell.addEventListener('change', ev => { const id = ev.target.dataset?.calendar; if (!id) return; ev.target.checked ? hidden.delete(id) : hidden.add(id); render(); shell.querySelector(`[data-calendar="${CSS.escape(id)}"]`)?.focus(); });
+  shell.addEventListener('keydown', ev => { if (ev.key === 'Escape' && whom) { ev.preventDefault(); settleWhom('skip'); } });
   shell.addEventListener('input', ev => { if (ev.target.name==='context') contextDraft = ev.target.value; if (ev.target.name==='ob-book' && ob) ob.book = ev.target.value; });
   shell.addEventListener('submit', async ev => { ev.preventDefault();
     const add = ev.target.closest?.('.db-add');
@@ -1317,19 +1444,19 @@ export function mountDaybook(root, bridge = {}) {
   }, 30000);
   render({cascade: true});
   document.fonts?.ready?.then(() => { if (!disposed) fitHeader(); });
-  Promise.all([loadDocs(), loadInterests(), loadPlans(), loadPrefs()]).then(async () => {
+  Promise.all([loadDocs(), loadInterests(), loadPlans(), loadPrefs(), loadPeople()]).then(async () => {
     const who = person?.id || '';
     if (who && prefs.owner && prefs.owner !== who) {
       // A different Bonsai account opened this app: nothing of the last person's carries over.
       try { await bridge.resetApp?.(); } catch {}
-      prefs = {dismissed: [], hiddenEvents: [], theme: 'auto', onboarded: false, owner: who}; interests = {reading: [], topics: [], near: ''}; docs = {}; plans = []; data = null;
+      prefs = {dismissed: [], hiddenEvents: [], theme: 'auto', onboarded: false, owner: who}; interests = {reading: [], topics: [], near: ''}; docs = {}; plans = []; people = []; data = null;
       savePrefs().catch(() => {});
     } else if (who && !prefs.owner && (prefs.hasSnapshot || data)) { prefs.owner = who; if (prefs.onboarded === undefined) prefs.onboarded = true; savePrefs().catch(() => {}); }
     const fresh = !!bridge.onboard || prefs.onboarded === false || (prefs.onboarded === undefined && !prefs.hasSnapshot && !data) || (!!services && !CAL.some(([id]) => svc(id)?.connected));
     booted = true;
     if (fresh) { if (!bridge.load) { demoData = data || demoData; data = null; services = services || PREVIEW_SERVICES(); } beginOnboarding(); }
     else if (!data) refresh();
-    render(); schedulePoll();
+    render(); schedulePoll(); checkLatest();
   });
   return { setServices(list){ const had = anyCalendar(); services = list; if (!had && anyCalendar() && !data && booted) refresh(); else render(); }, setPerson(){ }, update(next){ data = next; render(); }, dispose(){ disposed = true; clearInterval(skyTimer); clearInterval(obTickTimer); clearTimeout(obTimer); clearTimeout(toastTimer); clearInterval(tick); cancelAnimationFrame(anim); ro?.disconnect(); scheme?.disconnect(); document.removeEventListener('selectionchange', placeBubble); root.replaceChildren(); } };
 }

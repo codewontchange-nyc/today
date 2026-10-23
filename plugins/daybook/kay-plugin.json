@@ -4,7 +4,7 @@
   "namespace": "daybook",
   "displayName": "Today",
   "description": "Your calendars in one calm view: today in focus, the days ahead prepared, and an agent that turns a passing thought into a plan.",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "compatibility": {
     "sdk": "^0.13.7"
   },
@@ -141,6 +141,36 @@
               "responseSchema": {
                 "type": "object"
               }
+            },
+            {
+              "localId": "people",
+              "displayName": "Remember who you mean",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "whois",
+              "displayName": "Look up a person you mentioned",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "latest",
+              "displayName": "Check for a newer version of Today",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
             }
           ]
         }
@@ -227,6 +257,24 @@
             "operations": [
               "register"
             ]
+          },
+          {
+            "endpoint": "people",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "whois",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "latest",
+            "operations": [
+              "register"
+            ]
           }
         ],
         "storage": [
@@ -310,6 +358,24 @@
           },
           {
             "endpoint": "reset",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "people",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "whois",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "latest",
             "operations": [
               "invoke"
             ]
