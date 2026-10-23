@@ -114,6 +114,7 @@ export function mountDaybook(root, bridge = {}) {
 @keyframes db-ob-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @media(max-width:860px){.db-ob{height:auto;min-height:100%}.db-ob-points,.db-ob-looks{grid-template-columns:1fr}.db-ob-title{font-size:32px}.db-ob-top,.db-ob-stage{padding-left:24px;padding-right:24px}}
 .db-morph{animation:db-become 1s var(--db-glide) both}
+.db-saving{position:absolute;top:10px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--db-ink-2);animation:db-ob-pulse 1.2s var(--db-ease) infinite;z-index:2}
 @keyframes db-become{0%{background-color:transparent;box-shadow:inset 0 0 0 1px var(--db-hair-2);transform:scale(.97)}55%{transform:scale(1.02)}100%{transform:none}}
 .db-morph .db-aura{animation:db-aura-in 1.4s var(--db-ease) .15s both}
 @keyframes db-aura-in{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
@@ -284,7 +285,7 @@ export function mountDaybook(root, bridge = {}) {
   async function loadPrefs(){ try { const v = bridge.loadPrefs ? await bridge.loadPrefs() : JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); if (v) { prefs = {dismissed: v.dismissed || [], hiddenEvents: v.hiddenEvents || [], theme: ['auto','light','dark'].includes(v.theme) ? v.theme : 'auto', owner: v.owner || '', onboarded: v.onboarded, hasSnapshot: v.hasSnapshot, setup: v.setup || {}, accepted: Array.isArray(v.accepted) ? v.accepted : []}; prefs.accepted.forEach(id => accepted.add(id)); } } catch {} }
   async function savePrefs(){ if (bridge.savePrefs) await bridge.savePrefs(prefs); else localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }
   const visible = d => [...(data?.events||[]).filter(x=>x.date===d && !hidden.has(x.sourceId) && !isHiddenEv(x.id)), ...acceptedOn(d)];
-  const morph = new Set();
+  const morph = new Set(), saving = new Set();
   // A suggestion you accepted is an event now: a white card in its calendar's color, until the calendar's own copy arrives.
   function acceptedOn(d){
     const out = [];
@@ -1026,7 +1027,7 @@ export function mountDaybook(root, bridge = {}) {
     events.sort((a,b)=>a.s-b.s); let group=[], end=-1; const placed=[];
     const flush=()=>{const cols=[];group.forEach(v=>{let i=cols.findIndex(c=>c<=v.s);if(i<0){i=cols.length;cols.push(0)}cols[i]=v.e;v.lane=i});group.forEach(v=>v.lanes=cols.length);placed.push(...group);group=[]};
     events.forEach(v=>{if(v.s>=end&&group.length)flush();group.push(v);end=Math.max(end,v.e)}); if(group.length)flush();
-    const blocks = placed.map(v=>{const short=(v.e-v.s)<=60; const w=100/v.lanes; return `<button class="db-te ${short?'short':''} ${v.e<nowMin?'past':''} ${cls(v.x)} ${v.x.accepted?'accepted':''} ${morph.has(v.x.id)?'db-morph':''}" data-action="${v.x.accepted?'note:'+e(v.x.noteId):'event:'+e(v.x.id)}" style="--c:${color(v.x.sourceId)};top:${pct(v.s)}%;height:${(Math.min(v.e,re)-v.s)/total*100}%;left:calc(${w*v.lane}% + ${v.lane?4:0}px);width:calc(${w}% - ${v.lanes>1?4:0}px)">${aura(v.x.id)}<strong>${e(v.x.title)}</strong><small>${span(v.x)}</small></button>`;}).join('');
+    const blocks = placed.map(v=>{const short=(v.e-v.s)<=60; const w=100/v.lanes; return `<button class="db-te ${short?'short':''} ${v.e<nowMin?'past':''} ${cls(v.x)} ${v.x.accepted?'accepted':''} ${morph.has(v.x.id)?'db-morph':''} ${saving.has(v.x.id)?'saving':''}" data-action="${v.x.accepted?'note:'+e(v.x.noteId):'event:'+e(v.x.id)}" style="--c:${color(v.x.sourceId)};top:${pct(v.s)}%;height:${(Math.min(v.e,re)-v.s)/total*100}%;left:calc(${w*v.lane}% + ${v.lane?4:0}px);width:calc(${w}% - ${v.lanes>1?4:0}px)">${aura(v.x.id)}<strong>${e(v.x.title)}</strong><small>${span(v.x)}</small></button>`;}).join('');
     const gaps = openGaps(events, Math.max(nowMin, rs), Math.min(re, 1320));
     const ideasToday = timed.filter(t=>t.kind==='idea');
     const open = gaps.map(([a,b])=>{ const idea = ideasToday.find(t=>t.at>=a && t.at<b); return `<div class="db-open" style="top:calc(${pct(a)}% + 4px);height:calc(${(b-a)/total*100}% - 8px)"><button class="db-open-main" data-action="open:${hm(a)}-${hm(b)}"><span>Open</span>${time(hm(a))} to ${time(hm(b))} · ${dur(b-a)}</button>${idea?`<div class="db-open-idea ${fresh.has(idea.x.id)?'db-fresh':''}"><button data-action="note:${e(idea.x.id)}">${e(idea.x.title)}</button>${acceptBtn(idea.x)}</div>`:''}</div>`; }).join('');
@@ -1038,7 +1039,7 @@ export function mountDaybook(root, bridge = {}) {
   }
   function itemLarge(t, crowded){
     const x = t.x;
-    if (t.kind==='event') { const learned = x.date < today && plainText(docs['event:'+x.id]?.body); return `<div class="db-evwrap"><button class="db-ev ${cls(x)} ${x.accepted?'accepted':''} ${morph.has(x.id)?'db-morph':''}" data-action="${x.accepted?'note:'+e(x.noteId):'event:'+e(x.id)}" style="--c:${color(x.sourceId)}">${aura(x.id)}<small>${span(x)}</small><strong>${e(x.title)}</strong>${x.date < today ? `<em class="db-learn ${learned?'done':''}">${learned ? e('Learned · ' + learned.slice(0,60)) : 'Note what you learned'}</em>` : imported(x)?'<em>Imported · attendance unknown</em>':hold(x)?'<em>Hold · not confirmed</em>':''}</button>${x.accepted?'':`<button class="db-x" data-action="hide:${e(x.id)}" aria-label="Hide this event" title="Hide this event">×</button>`}</div>`; }
+    if (t.kind==='event') { const learned = x.date < today && plainText(docs['event:'+x.id]?.body); return `<div class="db-evwrap"><button class="db-ev ${cls(x)} ${x.accepted?'accepted':''} ${morph.has(x.id)?'db-morph':''} ${saving.has(x.id)?'saving':''}" data-action="${x.accepted?'note:'+e(x.noteId):'event:'+e(x.id)}" style="--c:${color(x.sourceId)}">${aura(x.id)}${saving.has(x.id)?'<i class="db-saving" title="Adding to your calendar"></i>':''}<small>${span(x)}</small><strong>${e(x.title)}</strong>${x.date < today ? `<em class="db-learn ${learned?'done':''}">${learned ? e('Learned · ' + learned.slice(0,60)) : 'Note what you learned'}</em>` : imported(x)?'<em>Imported · attendance unknown</em>':hold(x)?'<em>Hold · not confirmed</em>':''}</button>${x.accepted?'':`<button class="db-x" data-action="hide:${e(x.id)}" aria-label="Hide this event" title="Hide this event">×</button>`}</div>`; }
     if (t.kind==='rest') return `<div class="db-tile"><button class="db-tile-main" data-action="note:${e(x.id)}"><span class="db-frame" style="--h:calc(${crowded?84:124}px*var(--s,1))">${scene(artFor(x))}</span><span class="db-cap"><span class="db-eyebrow">Suggestion${x.suggestion?' · '+time(x.suggestion.start):''}</span><strong>${e(x.title)}</strong>${crowded?'':`<p>${e(x.body)}</p>`}</span></button>${suggestionFor(x)?`<div class="db-accept-row">${acceptBtn(x)}</div>`:''}<button class="db-x" data-action="dismiss:${e(x.id)}" aria-label="Not for me" title="Not for me">×</button></div>`;
     if (t.kind==='artifact') return `<div class="db-evwrap"><button class="db-folio" data-action="note:${e(x.id)}"><span class="db-thumb" style="height:calc(${crowded?52:74}px*var(--s,1))">${scene('paper')}</span><span><span class="db-eyebrow">Prepared</span><strong>${e(x.title)}</strong><p>${e(x.body)}</p>${crowded?'':`<span class="db-link">${ic('doc')}${e(x.label||'Open brief')}${accepted.has(x.id)?' · time held':''}</span>`}</span></button><button class="db-x" data-action="dismiss:${e(x.id)}" aria-label="Dismiss this brief" title="Dismiss this brief">×</button></div>`;
     if (t.kind==='idea') return `<div class="db-idea ${x.working?'working':''} ${fresh.has(x.id)?'db-fresh':''}"><button class="db-idea-main" data-action="${x.summary?'plan:'+e(x.planId):'note:'+e(x.id)}"><span class="db-eyebrow">${ideaLabel(x)}${x.time?' · '+time(x.time):''}</span><strong>${e(x.title)}</strong>${crowded?'':`<span class="db-d">${e(x.body)}</span>`}</button>${x.summary?'':`<div class="db-accept-row">${acceptBtn(x)}</div>`}<button class="db-x" data-action="dismiss:${e(x.summary?'plan-'+x.planId:x.id)}" aria-label="Not for me" title="Not for me">×</button></div>`;
@@ -1370,16 +1371,20 @@ export function mountDaybook(root, bridge = {}) {
   try { if (!bridge.reserve) JSON.parse(localStorage.getItem(ACCEPT_KEY) || '[]').forEach(id => accepted.add(id)); } catch {}
   async function accept(id){
     const x = findNote(id), sg = x && suggestionFor(x); if (!sg || accepted.has(id)) return;
-    const btns = shell.querySelectorAll(`[data-action="accept:${CSS.escape(id)}"]`); btns.forEach(b=>{ b.disabled = true; b.classList.add('is-busy'); b.lastChild.textContent = 'Adding…'; });
+    const key = 'acc-' + id;
+    accepted.add(id); saving.add(key); morph.add(key); render(); setTimeout(() => morph.delete(key), 1400);
     try {
       if (bridge.reserve) await bridge.reserve(sg, id);
-      accepted.add(id);
       if (!bridge.reserve) localStorage.setItem(ACCEPT_KEY, JSON.stringify([...accepted]));
       prefs.accepted = [...accepted].slice(-300); savePrefs().catch(() => {});
-      morph.add('acc-' + id); render(); setTimeout(() => morph.delete('acc-' + id), 1400);
+      saving.delete(key); render();
       showToast(bridge.reserve ? `On your calendar · ${shortDate(sg.date)}, ${time(sg.start)}` : 'Accepted. In the installed app this goes on your calendar.');
-    } catch (err) { btns.forEach(b=>{ b.disabled = false; b.classList.remove('is-busy'); b.lastChild.textContent = 'Accept'; }); showToast(err.message || 'Could not add it to your calendar.'); }
+    } catch (err) {
+      accepted.delete(id); saving.delete(key); render();
+      showToast(`${err.message || 'It was not added to your calendar.'} The suggestion is back.`);
+    }
   }
+
   shell.addEventListener('click', ev => {
     if (suppressClick) return;
     const b = ev.target.closest('[data-action]'); if (!b || b.disabled || !shell.contains(b)) return; const a = b.dataset.action, side = b.closest('.db-left') ? 'left' : 'right';
