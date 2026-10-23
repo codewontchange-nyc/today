@@ -22,7 +22,7 @@ export function mountDaybook(root, bridge = {}) {
 .db-now{position:absolute;left:102px;width:calc(37% + 8px);border-top:1px solid var(--db-terracotta);pointer-events:none;z-index:3;transition:top 1.2s var(--db-glide)}.db-now:before{content:'';position:absolute;left:-4px;top:-4px;width:7px;height:7px;border-radius:50%;background:var(--db-terracotta)}.db-now span{position:absolute;left:-58px;top:-8px;width:50px;text-align:right;font-size:10.5px;font-weight:600;line-height:1;color:var(--db-terracotta)}.db-empty{position:absolute;top:2px;left:0;right:0;font-family:var(--db-serif);font-style:italic;font-size:14px;color:var(--db-muted);line-height:1.6}
 .db-notes{position:absolute;top:0;bottom:0;left:calc(110px + 37% + 52px);right:56px;display:flex;flex-direction:column;gap:34px;overflow:hidden}.db-note{display:block;color:var(--db-muted);flex-shrink:0}.db-note .db-eyebrow{display:flex;align-items:center;gap:7px;margin-bottom:6px}.db-note .db-eyebrow i{width:14px;height:6px;border-radius:6px;background:var(--db-band) 60% 50%/400% auto;display:inline-block}.db-note strong{display:block;font-family:var(--db-serif);font-weight:400;font-size:17px;line-height:1.3;letter-spacing:-.01em;color:var(--db-ink);margin-bottom:5px}.db-note .db-clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;line-height:1.65}.db-note:hover strong{color:var(--db-forest)}.db-link{display:inline-flex;align-items:center;gap:6px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;font-weight:500;color:var(--db-ink-2);margin-top:9px;border-bottom:1px solid var(--db-hair-2);padding-bottom:1px}.db-link svg{width:12px;height:12px}.db-plinth{flex:0 1 190px;min-height:0;margin-top:auto;position:relative;border-radius:16px;overflow:hidden;background:var(--db-tile)}.db-plinth:before,.db-tile .db-frame:before,.db-thumb:before{content:'';position:absolute;inset:0;background-image:${LINEN};background-size:150px 150px;opacity:.55;mix-blend-mode:var(--db-blend)}
 .db-promptwrap{flex-shrink:0;display:flex;justify-content:center;padding:6px 56px 2px}.db-context{width:min(600px,100%);margin:0;flex-shrink:0;display:flex;gap:8px;align-items:center;background:var(--db-card);border:1px solid var(--db-hair);border-radius:999px;padding:5px 5px 5px 20px;box-shadow:var(--db-shadow);transition:box-shadow .5s var(--db-glide),border-color .3s}.db-context:focus-within{border-color:var(--db-hair-2);box-shadow:var(--db-shadow-lift)}.db-context input{border:0;outline:none!important;background:none;min-width:0;width:100%;padding:7px 0;font-size:13px}.db-context input::placeholder{color:var(--db-faint)}.db-context button{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--db-ink);color:var(--db-paper)}.db-context button:hover{transform:translateX(1px)}.db-context svg{width:14px;height:14px}
-.db-views{display:inline-flex;margin-top:24px;position:relative;padding:3px;border-radius:999px;background:color-mix(in srgb,var(--db-ink) 6%,transparent);box-shadow:inset 0 0 0 1px var(--db-hair)}.db-views button{position:relative;z-index:1;width:76px;height:28px;text-align:center;font-size:12px;font-weight:500;color:var(--db-muted);border-radius:999px}.db-views button[aria-selected="true"]{color:var(--db-ink)}.db-views button:hover{color:var(--db-ink)}.db-views i{position:absolute;top:3px;left:3px;width:76px;height:28px;border-radius:999px;background:var(--db-card);box-shadow:0 1px 2px rgba(32,44,39,.1),0 4px 10px -4px rgba(32,44,39,.18);transform:translateX(calc(var(--tab,0) * 76px));transition:transform .7s var(--db-spring)}
+.db-views{--tw:76px;display:inline-flex;margin-top:24px;position:relative;padding:3px;border-radius:999px;background:color-mix(in srgb,var(--db-ink) 6%,transparent);box-shadow:inset 0 0 0 1px var(--db-hair)}.db-views button{position:relative;z-index:1;width:var(--tw);height:28px;text-align:center;font-size:12px;font-weight:500;color:var(--db-muted);border-radius:999px}.db-views button[aria-selected="true"]{color:var(--db-ink)}.db-views button:hover{color:var(--db-ink)}.db-views i{position:absolute;top:3px;left:3px;width:var(--tw);height:28px;border-radius:999px;background:var(--db-card);box-shadow:0 1px 2px rgba(32,44,39,.1),0 4px 10px -4px rgba(32,44,39,.18);transform:translateX(calc(var(--tab,0) * var(--tw)));transition:transform .7s var(--db-spring)}
 .db-pager{flex:1 1 0;min-height:0;position:relative;overflow:hidden;overscroll-behavior:contain;touch-action:pan-y;outline:none;cursor:grab}.db-pager.dragging{cursor:grabbing;user-select:none}.db-pager.dragging button{pointer-events:none}.db-rail{display:flex;height:100%;will-change:transform;transform:translate3d(0,0,0)}.db-pager::-webkit-scrollbar{display:none}.db-page{flex:0 0 100%;min-width:0;min-height:0;padding:12px 56px 12px;display:grid;max-height:100%;overflow:hidden}.db-pager.enter .db-page{animation:db-in .8s var(--db-glide) both}
 .db-page.d3{grid-template-columns:repeat(3,minmax(0,1fr));gap:40px}.db-page.db-strip{display:flex!important;flex:0 0 auto!important;max-width:none;padding:12px 36px!important;gap:0!important}.db-strip.d3>.db-col{flex:0 0 calc((100cqw - 72px) / 3);padding:0 20px}.db-strip.d7>.db-col{flex:0 0 calc((100cqw - 72px) / 7);padding:0 6px}.db-strip>.db-col[inert] .db-aura b{animation-play-state:paused}.db-strip>.db-col{transition:opacity .5s var(--db-ease)}.db-strip>.db-col[inert]{opacity:.35}.db-pager:has(.db-strip){-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 36px,#000 calc(100% - 36px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 36px,#000 calc(100% - 36px),transparent 100%)}.db-page.d7{grid-template-columns:repeat(7,minmax(0,1fr));gap:14px}.db-col{display:flex;flex-direction:column;min-height:0;min-width:0;border-radius:14px}.db-col-head{padding:0 2px 16px;display:flex;align-items:baseline;gap:10px;white-space:nowrap;overflow:hidden;border-bottom:1px solid var(--db-hair);margin-bottom:22px}.db-col-head .db-eyebrow{font-size:9.5px}.db-col-head .db-num{font-family:var(--db-serif);font-size:30px;line-height:1;letter-spacing:-.02em;color:var(--db-ink)}.db-col-head .db-mon{font-size:11px;color:var(--db-muted)}.db-col-head .db-mark{margin-left:auto;font-size:10px;color:var(--db-muted);border:1px solid var(--db-hair-2);border-radius:999px;padding:1px 8px}.db-page.d7 .db-col-head{flex-direction:column;align-items:flex-start;gap:3px;padding-bottom:10px;margin-bottom:10px}.db-page.d7 .db-col-head .db-num{font-size:22px}
 .db-col-body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:14px;padding:2px 2px 12px}.db-col-body::-webkit-scrollbar{display:none}.db-page.d3 .db-col-body{container-type:size;container-name:day}.db-col-body>*{flex-shrink:0}
@@ -55,6 +55,64 @@ export function mountDaybook(root, bridge = {}) {
 @media(max-width:1080px){.db-head{padding-left:36px;padding-right:36px}.db-tools{right:24px}.db-hour{left:36px}.db-rule,.db-now{left:80px}.db-track{left:88px}.db-notes{left:calc(88px + 37% + 32px);right:36px;gap:28px}.db-promptwrap{padding-left:36px;padding-right:36px}.db-page{padding-left:36px;padding-right:36px}.db-page.d3{gap:28px}.db-foot{padding-left:36px;padding-right:36px}.db-title{font-size:38px}}
 @media(max-width:860px){.db{grid-template-columns:1fr;height:auto;overflow:visible}.db-left{height:min(640px,92vh)}.db-right{height:min(660px,92vh);border-left:0;border-top:1px solid var(--db-hair)}.db-toast{position:fixed}}
 @media(prefers-reduced-motion:reduce){.db *:not(.db-aura b){animation:none!important;transition:none!important}.db-aura b{animation-name:db-breathe!important;animation-duration:14s!important}}@keyframes db-breathe{0%,100%{opacity:var(--o,.85)}50%{opacity:calc(var(--o,.85) * .7)}}
+.db-headrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:16px;margin-top:6px}
+.db-headrow .db-title{margin-top:0!important;white-space:nowrap}
+.db-headrow .db-views{margin-top:0!important;justify-self:center}
+.db-headrow .db-tools{position:static!important;justify-self:end}
+.db-right>.db-head{padding-bottom:16px}
+.db-headrow[data-fit=tight] .db-title{font-size:34px}.db-headrow[data-fit=tight] .db-views{--tw:62px}.db-headrow[data-fit=tight] .db-range{font-size:13.5px;margin-right:2px}
+.db-headrow[data-fit=compact] .db-title{font-size:29px}.db-headrow[data-fit=compact] .db-views{--tw:56px}.db-headrow[data-fit=compact] .db-views button{font-size:11.5px}.db-headrow[data-fit=compact] .db-range{font-size:13px;margin-right:0}.db-headrow[data-fit=compact]{column-gap:12px}
+.db-headrow[data-fit=wrap]{grid-template-columns:minmax(0,1fr) auto;row-gap:12px}.db-headrow[data-fit=wrap] .db-title{font-size:34px}.db-headrow[data-fit=wrap] .db-views{grid-row:2;grid-column:1/-1;justify-self:start}
+.db-seg{display:flex;gap:2px;padding:3px;border-radius:999px;background:var(--db-hair);margin:2px 0 10px}.db-seg button{flex:1;padding:6px 8px;border-radius:999px;font-size:12px;color:var(--db-muted);text-align:center;transition:background .3s var(--db-ease),color .3s}.db-seg button[aria-pressed=true]{background:var(--db-card);color:var(--db-ink);box-shadow:var(--db-shadow)}
+.db-startover{color:var(--db-muted)!important}.db-startover.armed{color:#9a3b2a!important}
+.db.db-theming,.db.db-theming *{transition:background-color .6s var(--db-ease),color .6s var(--db-ease),border-color .6s var(--db-ease),box-shadow .6s var(--db-ease)!important}
+.db-ob{grid-column:1/-1;position:relative;display:flex;flex-direction:column;height:100%;min-height:0;overflow-y:auto;background:var(--db-paper);isolation:isolate}
+.db-ob:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:${LINEN};opacity:.32;mix-blend-mode:var(--db-blend)}
+.db-ob-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:26px 40px 0;min-height:56px}
+.db-ob-mark{display:flex;color:var(--db-ink)}.db-ob-mark svg{width:30px;height:30px}.db-ob-mark.small svg{width:22px;height:22px;opacity:.8}
+.db-ob-progress{display:flex;gap:6px;justify-self:center}.db-ob-progress i{width:22px;height:3px;border-radius:2px;background:var(--db-hair-2);transition:background .5s var(--db-ease),width .6s var(--db-glide)}.db-ob-progress i.on{background:var(--db-ink);width:34px}
+.db-ob-stage{flex:1 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 40px 56px}
+.db-ob-col{width:100%;max-width:58rem;transition:opacity .24s var(--db-ease),transform .24s var(--db-ease)}.db-ob-col.leaving{opacity:0;transform:translateY(-8px)}
+.db-ob-kicker{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--db-faint)}
+.db-ob-title{font-family:var(--db-serif);font-weight:400;font-size:42px;line-height:1.08;letter-spacing:-.02em;margin:16px 0 0;color:var(--db-ink)}
+.db-ob-lede{max-width:34rem;margin:12px 0 0;font-size:15.5px;line-height:1.55;color:var(--db-ink-2);min-height:1.55em}
+.db-ob-caret{display:inline-block;width:1.5px;height:1.05em;margin-left:2px;vertical-align:-3px;background:currentColor;animation:db-ob-caret 1s steps(1) infinite}
+@keyframes db-ob-caret{50%{opacity:0}}
+.db-ob-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:34px 0 0;padding:0;list-style:none}
+.db-ob-point{display:grid;grid-template-rows:96px auto 1fr;padding-bottom:20px;border:1px solid var(--db-hair-2);border-radius:14px;background:var(--db-card);overflow:hidden;box-shadow:var(--db-shadow)}
+.db-ob-band{background-image:var(--db-band);background-size:260% auto;opacity:.92}
+.db-ob-icon{position:relative;z-index:1;display:grid;place-items:center;width:34px;height:34px;margin:-17px 0 0 18px;border:1px solid var(--db-hair-2);border-radius:9px;background:var(--db-card);color:var(--db-ink-2)}.db-ob-icon svg{width:17px;height:17px}
+.db-ob-point-body{padding:12px 18px 0}.db-ob-point strong{display:block;font-family:var(--db-serif);font-weight:400;font-size:19px;line-height:1.25;color:var(--db-ink)}.db-ob-point-body>span{display:block;margin-top:5px;font-size:13px;line-height:1.5;color:var(--db-muted)}
+.db-ob-cta-row{display:flex;align-items:center;gap:20px;margin-top:34px}
+.db-ob-cta{display:inline-flex;align-items:center;gap:9px;padding:10px 20px 11px;border-radius:999px;background:var(--db-ink);color:var(--db-paper)!important;font-family:var(--db-serif);font-size:18px;line-height:1;letter-spacing:-.01em;transition:transform .5s var(--db-glide),box-shadow .25s var(--db-ease),opacity .3s}
+.db-ob-cta:hover{transform:translateY(-2px);box-shadow:0 16px 36px -14px rgba(32,44,39,.45)}.db-ob-cta:disabled{opacity:.32;pointer-events:none}
+.db-ob-arr{font-family:var(--db-sans);font-size:14px;transition:transform .25s var(--db-ease)}.db-ob-cta:hover .db-ob-arr{transform:translateX(4px)}
+.db-ob-link{font-size:13px;color:var(--db-muted);text-decoration:underline;text-decoration-color:var(--db-hair-2);text-underline-offset:4px;transition:color .2s}.db-ob-link:hover{color:var(--db-ink)}
+.db-ob-rows{display:grid;gap:10px;max-width:40rem;margin-top:30px}
+.db-ob-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border:1px solid var(--db-hair-2);border-radius:14px;background:var(--db-card);box-shadow:var(--db-shadow);transition:border-color .4s var(--db-ease)}
+.db-ob-row strong{display:block;font-family:var(--db-serif);font-weight:400;font-size:18px;color:var(--db-ink)}.db-ob-row span{display:block;margin-top:2px;font-size:12.5px;color:var(--db-muted)}
+.db-ob-row.on{border-color:color-mix(in srgb,#5f7d63 40%,var(--db-hair-2))}
+.db-ob-connect{flex-shrink:0;padding:8px 16px;border-radius:999px;border:1px solid var(--db-hair-2);font-size:13px;font-weight:500;color:var(--db-ink);transition:background .25s,border-color .25s,transform .4s var(--db-spring)}.db-ob-connect:hover{background:var(--db-ink);color:var(--db-paper);border-color:var(--db-ink);transform:translateY(-1px)}.db-ob-connect:disabled{opacity:.6;pointer-events:none}
+.db-ob-done{display:inline-flex!important;align-items:center;gap:6px;margin:0!important;font-size:13px!important;color:#5f7d63!important}.db-ob-done svg{width:15px;height:15px}
+.db-ob-chips{display:flex;flex-wrap:wrap;gap:8px;max-width:44rem;margin-top:30px}
+.db-ob-chip{padding:9px 16px;border-radius:999px;border:1px solid var(--db-hair-2);font-size:14px;color:var(--db-ink-2);background:var(--db-card);transition:background .3s var(--db-ease),color .3s,border-color .3s,transform .45s var(--db-spring)}.db-ob-chip:hover{transform:translateY(-1px)}.db-ob-chip[aria-pressed=true]{background:var(--db-ink);color:var(--db-paper);border-color:var(--db-ink)}
+.db-ob-field{display:block;max-width:26rem;margin-top:26px}.db-ob-field span{display:block;font-size:12px;color:var(--db-muted)}.db-ob-field input{width:100%;margin-top:6px;padding:8px 0;border:0;border-bottom:1px solid var(--db-hair-2);background:transparent;font-family:var(--db-serif);font-size:20px;color:var(--db-ink);outline:none;transition:border-color .3s}.db-ob-field input:focus{border-color:var(--db-ink)}
+.db-ob-looks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;max-width:44rem;margin-top:30px}
+.db-ob-look{padding:12px 12px 14px;border:1px solid var(--db-hair-2);border-radius:14px;background:var(--db-card);text-align:left;transition:border-color .3s,box-shadow .3s,transform .45s var(--db-spring)}.db-ob-look:hover{transform:translateY(-2px)}.db-ob-look[aria-pressed=true]{border-color:var(--db-ink);box-shadow:0 0 0 1px var(--db-ink)}.db-ob-look strong{display:block;margin-top:10px;font-family:var(--db-serif);font-weight:400;font-size:17px;color:var(--db-ink)}
+.db-ob-mini{display:grid;grid-template-columns:1fr 1.5fr;grid-template-rows:repeat(3,1fr);gap:5px;height:86px;padding:8px;border-radius:9px;background:#f6f3ec;border:1px solid rgba(32,44,39,.08)}.db-ob-mini i{border-radius:4px;background:#e6e0d3}.db-ob-mini i:first-child{grid-row:1/4;background:#fbfaf6;border:1px solid rgba(32,44,39,.07)}
+.db-ob-mini.dark{background:#1a221e;border-color:rgba(239,243,233,.08)}.db-ob-mini.dark i{background:#29332e}.db-ob-mini.dark i:first-child{background:#151c19;border-color:rgba(239,243,233,.07)}
+.db-ob-mini.auto{background:linear-gradient(120deg,#f6f3ec 0 50%,#1a221e 50% 100%)}.db-ob-mini.auto i{background:color-mix(in srgb,#e6e0d3 50%,#29332e)}.db-ob-mini.auto i:first-child{background:linear-gradient(120deg,#fbfaf6 0 60%,#151c19 60%)}
+.db-ob-steps{display:grid;gap:12px;margin:30px 0 0;padding:0;list-style:none}.db-ob-steps li{display:flex;align-items:center;gap:12px;font-size:14.5px;color:var(--db-faint);transition:color .4s var(--db-ease)}.db-ob-steps li i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--db-hair-2);color:transparent;transition:background .4s var(--db-ease),color .4s,border-color .4s}.db-ob-steps li i svg{width:13px;height:13px}
+.db-ob-steps li.now{color:var(--db-ink-2)}.db-ob-steps li.now i{border-color:var(--db-ink);animation:db-ob-pulse 1.4s var(--db-ease) infinite}.db-ob-steps li.done{color:var(--db-ink)}.db-ob-steps li.done i{background:var(--db-ink);border-color:var(--db-ink);color:var(--db-paper)}
+@keyframes db-ob-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--db-ink) 30%,transparent)}50%{box-shadow:0 0 0 6px transparent}}
+.db-ob [data-beat]{animation:db-ob-arrive .6s var(--db-ease) both}
+.db-ob [data-beat="0"]{animation-delay:.15s}.db-ob [data-beat="1"]{animation-delay:.3s}.db-ob [data-beat="2"]{animation-delay:.45s}.db-ob [data-beat="3"]{animation-delay:calc(.6s + var(--d,0) * .09s)}.db-ob [data-beat="4"]{animation-delay:.9s}
+.db-ob[data-step=welcome]:not(.lifted) .db-ob-point,.db-ob[data-step=welcome]:not(.lifted) .db-ob-cta-row{animation:none;opacity:0;visibility:hidden}
+.db-ob[data-step=welcome].lifted .db-ob-point{animation:db-ob-rise .9s var(--db-ease) both;animation-delay:calc(.5s + var(--d,0) * .55s)}.db-ob[data-step=welcome].lifted .db-ob-cta-row{animation:db-ob-arrive .6s var(--db-ease) both;animation-delay:2.1s}
+.db-ob.still [data-beat],.db-ob.still.lifted .db-ob-point,.db-ob.still.lifted .db-ob-cta-row{animation:none!important;opacity:1;visibility:visible}
+@keyframes db-ob-arrive{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes db-ob-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@media(max-width:860px){.db-ob{height:auto;min-height:100%}.db-ob-points,.db-ob-looks{grid-template-columns:1fr}.db-ob-title{font-size:32px}.db-ob-top,.db-ob-stage{padding-left:24px;padding-right:24px}}
 .db-sky{--sky-ink:rgba(32,44,39,.8);--sky-clay:#cf8a6a;--sky-sage:#a9b8a3;--sky-ochre:#dcb978;--sky-paper:#fbfaf6;position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;color:var(--sky-ink)}
 .db-sky.dark{--sky-ink:rgba(239,243,233,.78);--sky-clay:#b5745a;--sky-sage:#7f9079;--sky-ochre:#b89a5e;--sky-paper:#dcd6c8}
 .db-bird{position:absolute;width:calc(var(--bw)*var(--s,1));height:auto;opacity:.6;overflow:visible;animation:db-bird-fly var(--dur) linear var(--delay) infinite}
@@ -74,7 +132,7 @@ export function mountDaybook(root, bridge = {}) {
 .db-balloon-svg,.db-kite-svg{width:100%;height:auto;display:block;overflow:visible}
 @media(prefers-reduced-motion:reduce){.db-sky{display:none}}
 `);
-  const paths = {plus:'<path d="M12 5.5v13M5.5 12h13"/>',check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',leaf:'<path d="M5.5 18.5C5.5 10 10.5 5 19 5c0 8.5-5 13.5-13.5 13.5Z"/><path d="M5.5 18.5 13 11"/>',more:'<circle cx="5" cy="12" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="19" cy="12" r="1.1"/>',left:'<path d="m14.5 6-6 6 6 6"/>',right:'<path d="m9.5 6 6 6-6 6"/>',doc:'<path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8l-5-5Zm0 0v5h5M8.5 13h7m-7 3.5h5"/>',arrow:'<path d="M5 12h14m-5.5-6 6 6-6 6"/>',up:'<path d="M12 19V5m-6 6 6-6 6 6"/>'};
+  const paths = {plus:'<path d="M12 5.5v13M5.5 12h13"/>',check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',leaf:'<path d="M5.5 18.5C5.5 10 10.5 5 19 5c0 8.5-5 13.5-13.5 13.5Z"/><path d="M5.5 18.5 13 11"/>',more:'<circle cx="5" cy="12" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="19" cy="12" r="1.1"/>',left:'<path d="m14.5 6-6 6 6 6"/>',right:'<path d="m9.5 6 6 6-6 6"/>',doc:'<path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8l-5-5Zm0 0v5h5M8.5 13h7m-7 3.5h5"/>',arrow:'<path d="M5 12h14m-5.5-6 6 6-6 6"/>',up:'<path d="M12 19V5m-6 6 6-6 6 6"/>',moon:'<path d="M19 14.6A7.4 7.4 0 0 1 9.4 5a7.4 7.4 0 1 0 9.6 9.6Z"/>',sun:'<circle cx="12" cy="12" r="3.6"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/>',cal:'<rect x="4.5" y="5.5" width="15" height="14" rx="2.5"/><path d="M4.5 10h15M9 3.5v4M15 3.5v4"/>',spark:'<path d="M12 4.5v3M12 16.5v3M4.5 12h3M16.5 12h3M7 7l2 2M15 15l2 2M17 7l-2 2M9 15l-2 2"/>',shield:'<path d="M12 3.5 5.5 6v5.5c0 4 2.8 7.4 6.5 9 3.7-1.6 6.5-5 6.5-9V6L12 3.5Z"/><path d="m9.2 12.2 2 2 3.6-3.8"/>'};
   const palette = ['#e4ecf5','#f9ebdc','#e6efe1','#f0e7f2','#f2ede5','#f1efe0'];
   const hash = s => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
   const prng = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -137,7 +195,8 @@ export function mountDaybook(root, bridge = {}) {
   const hm = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
   const dur = m => m >= 60 ? `${Math.floor(m/60)}h${m%60?' '+(m%60)+'m':''}` : `${m}m`;
   const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const isDark = () => { const a = document.documentElement.dataset?.colorScheme; if (a) return a === 'dark'; const bg = getComputedStyle(document.documentElement).getPropertyValue('--kay-color-bg-base').trim(); if (/^#([0-9a-f]{6})/i.test(bg)) { const n = parseInt(bg.slice(1,7),16); return ((n>>16)*.3 + ((n>>8)&255)*.59 + (n&255)*.11) < 110; } return !!window.matchMedia?.('(prefers-color-scheme: dark)').matches; };
+  const hostDark = () => { const a = document.documentElement.dataset?.colorScheme; if (a) return a === 'dark'; const bg = getComputedStyle(document.documentElement).getPropertyValue('--kay-color-bg-base').trim(); if (/^#([0-9a-f]{6})/i.test(bg)) { const n = parseInt(bg.slice(1,7),16); return ((n>>16)*.3 + ((n>>8)&255)*.59 + (n&255)*.11) < 110; } return !!window.matchMedia?.('(prefers-color-scheme: dark)').matches; };
+  const isDark = () => prefs?.theme === 'dark' ? true : prefs?.theme === 'light' ? false : hostDark();
   const today = dateKey(new Date()), tomorrow = add(today,1);
   let data = bridge.initialData || null, view = '3', page = {'3':0,'7':0,month:0}, hidden = new Set(), menu = false, accepted = new Set(), busy = false, origin = null, toastTimer, disposed = false, lastError = '', contextDraft = '', contextHint = '', flash = null, anim = 0, animating = false, wheelAcc = 0, wheelLock = false, wheelQuiet = 0, scrollRaf = 0;
   const style = document.createElement('style'); style.textContent = css; root.append(style);
@@ -199,10 +258,10 @@ export function mountDaybook(root, bridge = {}) {
   const imported = x => cal(x.sourceId).kind === 'imported' || x.sourceId === 'partiful';
   const hold = x => /hold|tentative/i.test(x.status||'') || /^hold\b/i.test(x.title||'');
   const marker = x => x.kind === 'workingLocation' || (!x.start && /^(home|office|remote)$/i.test(x.title||''));
-  const PREFS_KEY = 'daybook-prefs'; let prefs = {dismissed: [], hiddenEvents: []}, undoFn = null;
+  const PREFS_KEY = 'daybook-prefs'; let prefs = {dismissed: [], hiddenEvents: [], theme: 'auto'}, undoFn = null;
   const isDismissed = id => prefs.dismissed.some(d => d.id === id);
   const isHiddenEv = id => prefs.hiddenEvents.some(d => d.id === id);
-  async function loadPrefs(){ try { const v = bridge.loadPrefs ? await bridge.loadPrefs() : JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); if (v) prefs = {dismissed: v.dismissed || [], hiddenEvents: v.hiddenEvents || []}; } catch {} }
+  async function loadPrefs(){ try { const v = bridge.loadPrefs ? await bridge.loadPrefs() : JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); if (v) prefs = {dismissed: v.dismissed || [], hiddenEvents: v.hiddenEvents || [], theme: ['auto','light','dark'].includes(v.theme) ? v.theme : 'auto', owner: v.owner || '', onboarded: v.onboarded, hasSnapshot: v.hasSnapshot}; } catch {} }
   async function savePrefs(){ if (bridge.savePrefs) await bridge.savePrefs(prefs); else localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }
   const visible = d => (data?.events||[]).filter(x=>x.date===d && !hidden.has(x.sourceId) && !isHiddenEv(x.id));
   let services = bridge.services || null, connecting = '', setupDismissed = false;
@@ -219,8 +278,127 @@ export function mountDaybook(root, bridge = {}) {
   function setupView(){
     return `<section class="db-left" aria-label="Today · Set up"><div class="db-docwrap" data-side="left"><div class="db-docscroll"><article class="db-docpage db-setup"><p class="db-kicker">Welcome</p><h1 class="db-doc-title">Bring your days in.</h1><p class="db-doc-dek">Connect the calendars you already use. Today keeps them in one quiet view, and your agent prepares what is coming.</p><div class="db-hero">${scene('stones')}</div><h2 class="db-setup-h">Calendars</h2><div class="db-options">${CAL.map(connectRow).join('')}</div><h2 class="db-setup-h">Email, for context</h2><p class="db-doc-hint" style="margin:-4px 0 12px">Optional. Your agent reads related mail to prepare meetings. Nothing is sent.</p><div class="db-options">${MAIL.map(connectRow).join('')}</div><div class="db-doc-actions">${anyCalendar()?`<button class="db-pill" data-action="setup-done">${ic('check')}Show my calendar</button>`:''}<button class="db-restore" data-action="setup-skip">Not now</button></div><p class="db-doc-foot">Connections are Bonsai's own sign-in, the same as App Store → Installed. Today never sends mail or invites anyone. It only adds a private block to your calendar when you press Accept.</p></article></div></div></section>`;
   }
+  // ---- Onboarding: Bonsai's welcome, then four short steps (calendars, email, interests, look) ----
+  const MARK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.25" y="4.75" width="17.5" height="16" rx="3.5"/><path d="M8 3v3.5M16 3v3.5"/><path d="M9.1 17.6h5.8c.9 0 1.6-.5 1.6-1.15s-.7-1.15-1.6-1.15H9.1c-.9 0-1.6.5-1.6 1.15s.7 1.15 1.6 1.15Z"/><path d="M10.2 15.1h3.6c.7 0 1.2-.42 1.2-.95s-.5-.95-1.2-.95h-3.6c-.7 0-1.2.42-1.2.95s.5.95 1.2.95Z"/><path d="M11.3 12.9h1.4c.45 0 .8-.32.8-.7s-.35-.7-.8-.7h-1.4c-.45 0-.8.32-.8.7s.35.7.8.7Z"/></svg>';
+  const person = bridge.person || null;
+  const firstName = () => String(person?.firstName || '').trim();
+  const OB_STEPS = ['welcome', 'calendars', 'mail', 'you', 'look', 'ready'];
+  const OB_TOPICS = ['Reading', 'Museums', 'Live music', 'Running', 'Yoga', 'Long walks', 'Cooking', 'Coffee spots', 'Art', 'Film'];
+  const OB_LEDE = 'I’m Today. I keep your calendars in one calm view and prepare what’s coming.';
+  const OB_POINTS = [['cal', 'Today, in focus', 'Every calendar on one quiet timeline, with only what matters next.'], ['spark', 'The days ahead, prepared', 'Briefs before meetings, open time found, small ideas for rest.'], ['shield', 'Nothing goes out for you', 'Accept adds a private block. No one is invited, and nothing is sent.']];
+  const OB_READY = ['Reading your calendars', 'Checking each account', 'Looking for related mail', 'Preparing your notes'];
+  let ob = null, obTimer = 0, obTickTimer = 0, demoData = null, booted = false;
+  const PREVIEW_SERVICES = () => [...CAL, ...MAIL].map(([id]) => ({id, available: true, connected: false, accounts: []}));
+  function beginOnboarding(){ ob = {step: 'welcome', shown: '', typed: false, picks: new Set(interests.topics || []), book: '', readyAt: 0}; menu = false; stacks.left.length = 0; stacks.right.length = 0; }
+  function obRow([id, name, hint], k){
+    const st = svc(id), on = !!st?.connected, busyNow = connecting === id;
+    if (st && st.available === false && !on) return '';
+    const who = on && st.accounts?.length ? st.accounts.slice(0, 2).join(', ') + (st.accounts.length > 2 ? ` and ${st.accounts.length - 2} more` : '') : '';
+    return `<div class="db-ob-row ${on ? 'on' : ''}" data-beat="3" style="--d:${k}"><div><strong>${e(name)}</strong><span>${e(on ? (who || 'Connected') : hint)}</span></div>${on ? `<span class="db-ob-done">${ic('check')}Connected</span>` : `<button class="db-ob-connect" data-action="connect:${e(id)}" ${busyNow ? 'disabled' : ''}>${busyNow ? 'Opening…' : 'Connect'}</button>`}</div>`;
+  }
+  function onboardView(still){
+    const st = ob.step, idx = OB_STEPS.indexOf(st), cal = anyCalendar();
+    const head = (k, t, l) => `<p class="db-ob-kicker" data-beat="0">${k}</p><h1 class="db-ob-title" data-beat="1">${t}</h1><p class="db-ob-lede" data-beat="2">${l}</p>`;
+    const next = (label, dis, act = 'ob-next') => `<button class="db-ob-cta" data-action="${act}" ${dis ? 'disabled' : ''}>${label}<span class="db-ob-arr" aria-hidden="true">→</span></button>`;
+    const back = '<button class="db-ob-link" data-action="ob-back">Back</button>';
+    let body = '';
+    if (st === 'welcome') body = `<div class="db-ob-head"><span class="db-ob-mark" data-beat="0">${MARK}</span><h1 class="db-ob-title" data-beat="1">${firstName() ? `Nice to meet you, ${e(firstName())}.` : 'Nice to meet you.'}</h1><p class="db-ob-lede db-ob-type" data-beat="2" data-type="${e(OB_LEDE)}">${ob.typed ? e(OB_LEDE) : ''}</p></div><ul class="db-ob-points">${OB_POINTS.map(([i, t, l], k) => `<li class="db-ob-point" data-beat="3" style="--d:${k}"><span class="db-ob-band" style="background-position:${['6% 40%', '50% 62%', '94% 30%'][k]}"></span><span class="db-ob-icon">${ic(i)}</span><span class="db-ob-point-body"><strong>${t}</strong><span>${l}</span></span></li>`).join('')}</ul><div class="db-ob-cta-row" data-beat="4">${next('Let’s go')}</div>`;
+    else if (st === 'calendars') body = head('Step 1 of 4', 'Bring your days in.', 'Connect the calendars you already use. Each account stays yours, and you can add more later.') + `<div class="db-ob-rows">${CAL.map(obRow).join('')}</div><div class="db-ob-cta-row" data-beat="4">${next('Continue', !cal)}${cal ? '' : '<button class="db-ob-link" data-action="ob-skip">Not now</button>'}${back}</div>`;
+    else if (st === 'mail') body = head('Step 2 of 4', 'Add email, for context.', 'Optional. Your agent reads related mail to prepare your meetings. It never sends anything.') + `<div class="db-ob-rows">${MAIL.map(obRow).join('')}</div><div class="db-ob-cta-row" data-beat="4">${next('Continue')}<button class="db-ob-link" data-action="ob-skip">Skip</button>${back}</div>`;
+    else if (st === 'you') body = head('Step 3 of 4', 'What fills your free time?', 'Pick a few. When your calendar has room, Today suggests something quiet that fits.') + `<div class="db-ob-chips" data-beat="3">${OB_TOPICS.map(t => `<button class="db-ob-chip" data-action="ob-chip:${e(t)}" aria-pressed="${ob.picks.has(t)}">${e(t)}</button>`).join('')}</div><label class="db-ob-field" data-beat="3" style="--d:1"><span>A book you’re reading</span><input name="ob-book" value="${e(ob.book)}" placeholder="Optional" autocomplete="off" maxlength="160"></label><div class="db-ob-cta-row" data-beat="4">${next('Continue')}<button class="db-ob-link" data-action="ob-skip">Skip</button>${back}</div>`;
+    else if (st === 'look') body = head('Step 4 of 4', 'Pick a look.', 'Change it any time with the moon at the top of Today.') + `<div class="db-ob-looks">${[['auto', 'Match Bonsai'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l], k) => `<button class="db-ob-look" data-action="ob-look:${v}" aria-pressed="${(prefs.theme || 'auto') === v}" data-beat="3" style="--d:${k}"><span class="db-ob-mini ${v}"><i></i><i></i><i></i><i></i></span><strong>${l}</strong></button>`).join('')}</div><div class="db-ob-cta-row" data-beat="4">${next('Continue')}${back}</div>`;
+    else body = head('All set', cal ? 'Your first look is on its way.' : 'You’re in.', cal ? 'I’m reading your calendars and preparing your notes. The first time takes a minute or two, and you can open Today while it works.' : 'Connect a calendar any time from the menu at the top of Today.') + (cal ? `<ul class="db-ob-steps" data-beat="3">${OB_READY.map(t => `<li><i aria-hidden="true">${ic('check')}</i>${t}</li>`).join('')}</ul>` : '') + `<div class="db-ob-cta-row" data-beat="4">${next('Open Today', false, 'ob-finish')}</div>`;
+    const progress = st !== 'welcome' && st !== 'ready' ? `<div class="db-ob-progress" aria-label="Step ${idx} of 4">${[1, 2, 3, 4].map(n => `<i class="${n <= idx ? 'on' : ''}"></i>`).join('')}</div>` : '<span></span>';
+    return `<section class="db-ob ${still ? 'still' : ''} ${ob.typed || st !== 'welcome' ? 'lifted' : ''}" data-step="${st}" aria-label="Welcome to Today"><div class="db-ob-top"><span class="db-ob-mark small">${st === 'welcome' ? '' : MARK}</span>${progress}<span></span></div><div class="db-ob-stage"><div class="db-ob-col">${body}</div></div></section>`;
+  }
+  function afterOnboardRender(){
+    if (ob.step === 'welcome' && !ob.typed) typeLede();
+    if (ob.step === 'ready') obTick();
+    if (ob.step === 'you') shell.querySelector('[name="ob-book"]')?.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); obNext(); } });
+    shell.querySelector('.db-ob-cta:not([disabled])')?.focus({preventScroll: true});
+  }
+  function typeLede(){
+    const el = shell.querySelector('.db-ob-type'); if (!el) return;
+    const text = el.dataset.type;
+    const done = () => { ob.typed = true; el.textContent = text; shell.querySelector('.db-ob')?.classList.add('lifted'); };
+    if (bridge.fast || reduced()) { done(); return; }
+    el.innerHTML = '<span></span><i class="db-ob-caret"></i>'; const out = el.firstChild; let i = 0;
+    clearTimeout(obTimer);
+    const step = () => { if (!ob || ob.step !== 'welcome' || !out.isConnected) return; i++; out.textContent = text.slice(0, i); if (i >= text.length) { ob.typed = true; obTimer = setTimeout(() => { el.querySelector('.db-ob-caret')?.remove(); shell.querySelector('.db-ob')?.classList.add('lifted'); }, 280); return; } obTimer = setTimeout(step, text[i - 1] === ' ' ? 48 : 24); };
+    obTimer = setTimeout(step, 700);
+  }
+  function obGo(step){
+    clearTimeout(obTimer);
+    const col = shell.querySelector('.db-ob-col');
+    const swap = () => { if (!ob) return; ob.step = step; render(); if (step === 'ready') obReady(); };
+    if (col && !reduced() && !bridge.fast) { col.classList.add('leaving'); setTimeout(swap, 240); } else swap();
+  }
+  function obNext(skip){
+    if (!ob) return;
+    const st = ob.step;
+    if (st === 'calendars' && !skip && !anyCalendar()) return;
+    if (st === 'calendars' && anyCalendar() && !data && !busy && bridge.load) refresh();
+    if (st === 'you' && !skip) {
+      const book = ob.book.trim();
+      interests.topics = [...new Set([...(interests.topics || []), ...ob.picks])];
+      if (book && !(interests.reading || []).some(r => String(r).toLowerCase() === book.toLowerCase())) interests.reading = [...(interests.reading || []), book];
+      saveInterests().catch(() => {});
+    }
+    obGo(OB_STEPS[Math.min(OB_STEPS.length - 1, OB_STEPS.indexOf(st) + 1)]);
+  }
+  function obBack(){ if (ob) obGo(OB_STEPS[Math.max(0, OB_STEPS.indexOf(ob.step) - 1)]); }
+  function obReady(){
+    ob.readyAt = Date.now();
+    if (!bridge.load && demoData && anyCalendar()) setTimeout(() => { if (!disposed && !data) { data = demoData; demoData = null; } }, bridge.fast ? 150 : 3600);
+    else if (anyCalendar() && !data && !busy) refresh();
+    clearInterval(obTickTimer); obTickTimer = setInterval(obTick, 400);
+  }
+  function obTick(){
+    if (!ob || ob.step !== 'ready') { clearInterval(obTickTimer); return; }
+    const list = [...shell.querySelectorAll('.db-ob-steps li')]; if (!list.length) return;
+    const per = bridge.load ? 2600 : 860, n = data ? list.length : Math.min(list.length - 1, Math.floor((Date.now() - (ob.readyAt || Date.now())) / per));
+    list.forEach((li, k) => { li.classList.toggle('done', k < n); li.classList.toggle('now', k === n && !data); });
+    if (data) clearInterval(obTickTimer);
+  }
+  function obFinish(){
+    clearInterval(obTickTimer); clearTimeout(obTimer);
+    prefs.onboarded = true; if (person?.id) prefs.owner = person.id; savePrefs().catch(() => {});
+    ob = null;
+    if (!data && demoData) { data = demoData; demoData = null; }
+    if (!data && anyCalendar() && !busy) refresh();
+    render({cascade: true});
+  }
+  function setTheme(t){
+    if (!['auto', 'light', 'dark'].includes(t)) return;
+    prefs.theme = t; savePrefs().catch(() => {});
+    shell.classList.add('db-theming'); applyTheme(); setTimeout(() => shell.classList.remove('db-theming'), 750);
+    const d = isDark();
+    shell.querySelectorAll('[data-action="theme-toggle"]').forEach(b => { b.innerHTML = ic(d ? 'sun' : 'moon'); b.setAttribute('aria-pressed', String(d)); b.setAttribute('aria-label', d ? 'Light mode' : 'Dark mode'); b.title = d ? 'Light mode' : 'Dark mode'; });
+    shell.querySelectorAll('[data-action^="theme:"],[data-action^="ob-look:"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.action.split(':')[1] === t)));
+  }
+  function applyTheme(){
+    const d = isDark(); shell.classList.toggle('dark', d); sky.classList.toggle('dark', d);
+    if (bridge.textures) { const tx = d ? bridge.textures.dark : bridge.textures.light; shell.style.setProperty('--db-band', `url("${tx.band}")`); shell.style.setProperty('--db-band-soft', `url("${tx.soft}")`); }
+  }
+  function startOverClick(btn){
+    if (!btn.dataset.confirm) { btn.dataset.confirm = '1'; btn.textContent = 'Clear this app and start over?'; btn.classList.add('armed'); setTimeout(() => { if (btn.isConnected) { delete btn.dataset.confirm; btn.textContent = 'Start over as a new user'; btn.classList.remove('armed'); } }, 4000); return; }
+    startOver();
+  }
+  async function startOver(){
+    try { if (bridge.resetApp) await bridge.resetApp(); } catch (err) { showToast(err.message || 'The app could not be cleared.'); return; }
+    if (!bridge.resetApp) { try { Object.keys(localStorage).filter(k => k.startsWith('daybook-')).forEach(k => localStorage.removeItem(k)); } catch {} }
+    prefs = {dismissed: [], hiddenEvents: [], theme: 'auto', onboarded: false, owner: person?.id || ''};
+    interests = {reading: [], topics: [], near: ''}; docs = {}; plans = []; accepted.clear(); hidden.clear(); ideaCache = []; ideaKey = '';
+    if (!bridge.load) { demoData = demoData || data; services = PREVIEW_SERVICES(); }
+    data = null; lastError = ''; setupDismissed = false;
+    await savePrefs().catch(() => {});
+    beginOnboarding(); render();
+  }
   async function connect(id){
-    if (!bridge.connect) { showToast('Connecting works in the installed app.'); return; }
+    if (!bridge.connect) {
+      if (ob && services) { connecting = id; render(); await sleep(bridge.fast ? 40 : 1100); const sv = svc(id); if (sv) { sv.connected = true; sv.accounts = ['you@example.com']; } connecting = ''; render(); showToast('Connected in this preview.'); return; }
+      showToast('Connecting works in the installed app.'); return;
+    }
     connecting = id; render({only:'left'});
     const res = await bridge.connect(id);
     connecting = '';
@@ -552,7 +730,7 @@ export function mountDaybook(root, bridge = {}) {
     const notes = [...timed.filter(t=>t.kind==='reply').slice(-1), ...mine, ...rest.filter(t=>!mine.includes(t))].slice(0,3).map(t=>`<div class="db-notewrap"><button class="db-note ${t.x.type==='reply'?'reply':''} ${t.x.working?'working':''} ${fresh.has(t.x.id)?'db-fresh':''}" data-action="${t.x.type==='reply'?'plan:'+e(t.x.planId):'note:'+e(t.x.id)}"><span class="db-eyebrow"><i style="background-position:${t.x.type==='artifact'?'38%':t.x.type==='reply'?'15%':'70%'} 50%"></i>${t.x.type==='artifact'?'Prepared':t.x.type==='rest'?'Suggestion':t.x.type==='reply'?'From your agent':'Note'}</span><strong>${e(t.x.title)}</strong><span class="db-clamp">${e(t.x.body)}</span>${t.x.artifact?`<span class="db-link">${ic('doc')}${e(t.x.label||'Open brief')}</span>`:''}${t.x.type==='reply'?`<span class="db-link">${plans.find(p=>p.id===t.x.planId)?.kind==='move'?'See the times':'See the plan'}</span>`:''}</button><button class="db-x" data-action="dismiss:${e(t.x.id)}" aria-label="Dismiss" title="Dismiss">×</button></div>`).join('');
     const upcoming = events.filter(v=>v.e>nowMin).length, biggest = gaps.slice().sort((a,b)=>(b[1]-b[0])-(a[1]-a[0]))[0];
     const allLine = [...markers.map(x=>x.title), ...allDay.map(x=>x.title)];
-    return `<section class="db-left" aria-label="Today"><header class="db-head"><p class="db-eyebrow">${label(today,{weekday:'long'})} · ${label(today,{month:'long',day:'numeric',year:'numeric'})}</p><h1 class="db-title">Today</h1><p class="db-sub"><span><b>${upcoming}</b> still ahead</span>${biggest?`<span>Open from <b>${time(hm(biggest[0]))}</b> to <b>${time(hm(biggest[1]))}</b></span>`:''}</p>${allLine.length?`<p class="db-allday">All day · ${e(allLine.join(' · '))}</p>`:''}<div class="db-tools"><button class="db-icon" data-action="interests" aria-label="Interests and reading">${ic('leaf')}</button><button class="db-icon" data-action="menu" aria-label="Calendars and sources" aria-expanded="${menu}">${ic('more')}</button></div></header>${menu?menuView():''}<div class="db-today"><div class="db-plot" data-rs="${rs}" data-re="${re}">${hours}<div class="db-track">${open}<div class="db-sel" ${pendingRange&&pendingRange.date===today?`style="top:${pct(mins(pendingRange.start))}%;height:${(mins(pendingRange.end)-mins(pendingRange.start))/total*100}%"`:'hidden'}><span>${pendingRange&&pendingRange.date===today?`${time(pendingRange.start)} to ${time(pendingRange.end)}`:''}</span></div>${placed.length?blocks:`<p class="db-empty">Nothing timed in your visible calendars today.${hidden.size?' Some calendars are hidden.':''}</p>`}</div><div class="db-notes">${notes}<div class="db-plinth" aria-hidden="true">${scene('stones')}</div></div>${nowMin>=rs&&nowMin<=re?`<div class="db-now" style="top:${pct(nowMin)}%"><span>${time(clock(new Date()))}</span></div>`:''}</div></div></section>`;
+    return `<section class="db-left" aria-label="Today"><header class="db-head"><p class="db-eyebrow">${label(today,{weekday:'long'})} · ${label(today,{month:'long',day:'numeric',year:'numeric'})}</p><h1 class="db-title">Today</h1><p class="db-sub"><span><b>${upcoming}</b> still ahead</span>${biggest?`<span>Open from <b>${time(hm(biggest[0]))}</b> to <b>${time(hm(biggest[1]))}</b></span>`:''}</p>${allLine.length?`<p class="db-allday">All day · ${e(allLine.join(' · '))}</p>`:''}<div class="db-tools"><button class="db-icon" data-action="theme-toggle" aria-pressed="${isDark()}" aria-label="${isDark()?'Light mode':'Dark mode'}" title="${isDark()?'Light mode':'Dark mode'}">${ic(isDark()?'sun':'moon')}</button><button class="db-icon" data-action="interests" aria-label="Interests and reading">${ic('leaf')}</button><button class="db-icon" data-action="menu" aria-label="Calendars and sources" aria-expanded="${menu}">${ic('more')}</button></div></header>${menu?menuView():''}<div class="db-today"><div class="db-plot" data-rs="${rs}" data-re="${re}">${hours}<div class="db-track">${open}<div class="db-sel" ${pendingRange&&pendingRange.date===today?`style="top:${pct(mins(pendingRange.start))}%;height:${(mins(pendingRange.end)-mins(pendingRange.start))/total*100}%"`:'hidden'}><span>${pendingRange&&pendingRange.date===today?`${time(pendingRange.start)} to ${time(pendingRange.end)}`:''}</span></div>${placed.length?blocks:`<p class="db-empty">Nothing timed in your visible calendars today.${hidden.size?' Some calendars are hidden.':''}</p>`}</div><div class="db-notes">${notes}<div class="db-plinth" aria-hidden="true">${scene('stones')}</div></div>${nowMin>=rs&&nowMin<=re?`<div class="db-now" style="top:${pct(nowMin)}%"><span>${time(clock(new Date()))}</span></div>`:''}</div></div></section>`;
   }
   function itemLarge(t, crowded){
     const x = t.x;
@@ -605,7 +783,7 @@ export function mountDaybook(root, bridge = {}) {
   }
   function aheadView(){
     const tabs = [['3','3 days'],['7','Week'],['month','Month']];
-    return `<section class="db-right" aria-label="Looking ahead"><header class="db-head">${busy?'<i class="db-progress" aria-hidden="true"></i>':''}<p class="db-eyebrow">${isBack(view,page[view])?'What you learned':'Plan gently'}</p><h2 class="db-title" data-back="${isBack(view,page[view])}">${isBack(view,page[view])?'Looking back':'Looking ahead'}</h2><div class="db-views" role="tablist" aria-label="Looking ahead range" style="--tab:${tabs.findIndex(t=>t[0]===view)}">${tabs.map(([v,l])=>`<button role="tab" aria-selected="${v===view}" data-action="view:${v}" tabindex="${v===view?0:-1}">${l}</button>`).join('')}<i aria-hidden="true"></i></div><div class="db-tools"><span class="db-range" aria-live="polite"></span><button class="db-icon" data-action="previous" aria-label="Previous">${ic('left')}</button><button class="db-icon" data-action="next" aria-label="Next">${ic('right')}</button></div></header><div class="db-pager" tabindex="0" aria-roledescription="carousel" aria-label="Looking ahead. Swipe or use the arrow keys to move between pages."><div class="db-rail">${pages()}</div></div><div class="db-promptwrap"><form class="db-context"><input name="context" value="${e(contextDraft)}" aria-label="Leave context for the agent" placeholder="${e(contextHint||'Ask for something, like a museum Saturday afternoon…')}" autocomplete="off" maxlength="1000"><button type="submit" aria-label="Save context">${ic('up')}</button></form></div><footer class="db-foot"><span>${busy?'Updating…':e(sourceLine())}</span><button data-action="status">${data.snapshot?'Snapshot':'Updated'} · ${new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}).format(new Date(data.fetchedAt||Date.now()))}</button></footer></section>`;
+    return `<section class="db-right" aria-label="Looking ahead"><header class="db-head">${busy?'<i class="db-progress" aria-hidden="true"></i>':''}<p class="db-eyebrow">${isBack(view,page[view])?'What you learned':'Plan gently'}</p><div class="db-headrow"><h2 class="db-title" data-back="${isBack(view,page[view])}">${isBack(view,page[view])?'Looking back':'Looking ahead'}</h2><div class="db-views" role="tablist" aria-label="Looking ahead range" style="--tab:${tabs.findIndex(t=>t[0]===view)}">${tabs.map(([v,l])=>`<button role="tab" aria-selected="${v===view}" data-action="view:${v}" tabindex="${v===view?0:-1}">${l}</button>`).join('')}<i aria-hidden="true"></i></div><div class="db-tools"><span class="db-range" aria-live="polite"></span><button class="db-icon" data-action="previous" aria-label="Previous">${ic('left')}</button><button class="db-icon" data-action="next" aria-label="Next">${ic('right')}</button></div></div></header><div class="db-pager" tabindex="0" aria-roledescription="carousel" aria-label="Looking ahead. Swipe or use the arrow keys to move between pages."><div class="db-rail">${pages()}</div></div><div class="db-promptwrap"><form class="db-context"><input name="context" value="${e(contextDraft)}" aria-label="Leave context for the agent" placeholder="${e(contextHint||'Ask for something, like a museum Saturday afternoon…')}" autocomplete="off" maxlength="1000"><button type="submit" aria-label="Save context">${ic('up')}</button></form></div><footer class="db-foot"><span>${busy?'Updating…':e(sourceLine())}</span><button data-action="status">${data.snapshot?'Snapshot':'Updated'} · ${new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}).format(new Date(data.fetchedAt||Date.now()))}</button></footer></section>`;
   }
   function sourceLine(){
     const p = data.coverage?.providers || [];
@@ -618,15 +796,15 @@ export function mountDaybook(root, bridge = {}) {
     const groups = {}; (data.calendars||[]).forEach(c=>{(groups[c.accountLabel||'Calendars'] ||= []).push(c)});
     const tone = {checked:'#5f7d63',waiting:'#c79a4b',unavailable:'#a9532e',failed:'#a9532e'};
     const providers = (data.coverage?.providers||[]).map(p=>`<div class="db-src-row" style="--s:${tone[p.status]||'#999'}"><b>${e(p.name)}${p.account?' · '+e(p.account):''}</b>${e(p.note||p.status)}</div>`).join('');
-    return `<div class="db-menu">${Object.entries(groups).map(([g,cs])=>`<h3>${e(g)}</h3>${cs.map(c=>`<label><span class="db-sw" style="background:${color(c.id)};box-shadow:0 0 0 3px color-mix(in srgb,${color(c.id)} 30%,transparent),0 0 10px ${color(c.id)}"></span>${e(c.name)}<input type="checkbox" data-calendar="${e(c.id)}" ${hidden.has(c.id)?'':'checked'} aria-label="Show ${e(c.name)}"></label>`).join('')}`).join('')}${providers?`<h3>Sources</h3>${providers}`:''}${services&&[...CAL,...MAIL].some(([id])=>svc(id)&&!svc(id).connected&&svc(id).available!==false)?`<h3>Add</h3>${[...CAL,...MAIL].filter(([id])=>svc(id)&&!svc(id).connected&&svc(id).available!==false).map(([id,name])=>`<button class="db-menu-connect" data-action="connect:${e(id)}">${ic('plus')}${e(name)}</button>`).join('')}`:''}${prefs.dismissed.length + prefs.hiddenEvents.length ? `<h3>Hidden</h3><p>${prefs.hiddenEvents.length} event${prefs.hiddenEvents.length===1?'':'s'}, ${prefs.dismissed.filter(d=>d.title).length} suggestion${prefs.dismissed.filter(d=>d.title).length===1?'':'s'}</p><button class="db-menu-connect" data-action="unhide-all">Show everything again</button>` : ''}<button class="db-refresh" data-action="refresh">${busy?'Updating…':'Refresh now'}</button></div>`;
+    return `<div class="db-menu">${Object.entries(groups).map(([g,cs])=>`<h3>${e(g)}</h3>${cs.map(c=>`<label><span class="db-sw" style="background:${color(c.id)};box-shadow:0 0 0 3px color-mix(in srgb,${color(c.id)} 30%,transparent),0 0 10px ${color(c.id)}"></span>${e(c.name)}<input type="checkbox" data-calendar="${e(c.id)}" ${hidden.has(c.id)?'':'checked'} aria-label="Show ${e(c.name)}"></label>`).join('')}`).join('')}${providers?`<h3>Sources</h3>${providers}`:''}${services&&[...CAL,...MAIL].some(([id])=>svc(id)&&!svc(id).connected&&svc(id).available!==false)?`<h3>Add</h3>${[...CAL,...MAIL].filter(([id])=>svc(id)&&!svc(id).connected&&svc(id).available!==false).map(([id,name])=>`<button class="db-menu-connect" data-action="connect:${e(id)}">${ic('plus')}${e(name)}</button>`).join('')}`:''}${prefs.dismissed.length + prefs.hiddenEvents.length ? `<h3>Hidden</h3><p>${prefs.hiddenEvents.length} event${prefs.hiddenEvents.length===1?'':'s'}, ${prefs.dismissed.filter(d=>d.title).length} suggestion${prefs.dismissed.filter(d=>d.title).length===1?'':'s'}</p><button class="db-menu-connect" data-action="unhide-all">Show everything again</button>` : ''}<h3>Appearance</h3><div class="db-seg" role="group" aria-label="Appearance">${[['auto','Match Bonsai'],['light','Light'],['dark','Dark']].map(([v,l])=>`<button data-action="theme:${v}" aria-pressed="${(prefs.theme||'auto')===v}">${l}</button>`).join('')}</div><button class="db-menu-connect db-startover" data-action="start-over">Start over as a new user</button><button class="db-refresh" data-action="refresh">${busy?'Updating…':'Refresh now'}</button></div>`;
   }
   function sideHTML(side){ return side === 'left' ? (stacks.left.length ? docSection('left') : needsSetup() ? setupView() : todayView()) : (stacks.right.length ? docSection('right') : aheadView()); }
   function render(opts = {}){
     if (disposed) return;
-    shell.classList.toggle('dark', isDark()); sky.classList.toggle('dark', isDark());
-    if (bridge.textures) { const tx = isDark() ? bridge.textures.dark : bridge.textures.light; shell.style.setProperty('--db-band', `url("${tx.band}")`); shell.style.setProperty('--db-band-soft', `url("${tx.soft}")`); }
+    applyTheme();
+    if (ob) { const toast = shell.querySelector('.db-toast'), still = ob.shown === ob.step; shell.innerHTML = onboardView(still); ob.shown = ob.step; if (toast) shell.append(toast); afterOnboardRender(); return; }
     const active = document.activeElement, selector = active && shell.contains(active) && active.dataset?.action ? `[data-action="${CSS.escape(active.dataset.action)}"]` : null;
-    if (!data && needsSetup()) { shell.innerHTML = setupView() + `<section class="db-right" aria-label="Looking ahead"><header class="db-head"><p class="db-eyebrow">Plan gently</p><h2 class="db-title">Looking ahead</h2></header><div class="db-docscroll"><p class="db-quiet" style="padding:20px 56px">Your next days appear here once a calendar is connected.</p></div></section>`; shell.append(bubble); return; }
+    if (!data && needsSetup() && booted) { shell.innerHTML = setupView() + `<section class="db-right" aria-label="Looking ahead"><header class="db-head"><p class="db-eyebrow">Plan gently</p><h2 class="db-title">Looking ahead</h2></header><div class="db-docscroll"><p class="db-quiet" style="padding:20px 56px">Your next days appear here once a calendar is connected.</p></div></section>`; shell.append(bubble); return; }
     if (!data) { if (lastError) shell.innerHTML = `<div class="db-message"><p>${e(lastError)}</p><button data-action="refresh" style="margin-top:15px;text-decoration:underline">Try again</button></div>`; else { shell.innerHTML = loadingView(); shell.append(bubble); startLoading(); } return; }
     page[view] = Math.min(page[view], pageCount(view)-1);
     const sides = opts.only ? [opts.only] : ['left','right'];
@@ -652,6 +830,7 @@ export function mountDaybook(root, bridge = {}) {
     if (t && t.dataset.back !== String(back)) { t.dataset.back = String(back); t.textContent = back ? 'Looking back' : 'Looking ahead'; if (eb) eb.textContent = back ? 'What you learned' : 'Plan gently'; t.classList.remove('db-swap'); void t.offsetWidth; t.classList.add('db-swap'); }
     if (strip(view)) { const a = page[view], b = a + Number(view); shell.querySelectorAll('.db-strip > .db-col').forEach((el, k) => { const off = k < a || k >= b; if (el.inert !== off) el.inert = off; }); shell.querySelector('.db-strip')?.setAttribute('aria-hidden', 'false'); shell.querySelector('.db-strip')?.setAttribute('aria-label', rangeLabel(view, page[view])); }
     else shell.querySelectorAll('.db-page').forEach((el,i)=>{ el.inert = i !== page[view]; el.setAttribute('aria-hidden', String(i !== page[view])); });
+    fitHeader();
   }
   let railX = 0, suppressClick = false;
   function setX(x){ railX = x; const r = shell.querySelector('.db-rail'); if (r) r.style.transform = `translate3d(${x.toFixed(2)}px,0,0)`; }
@@ -708,6 +887,13 @@ export function mountDaybook(root, bridge = {}) {
     const up = ev => { if (!pd || ev.pointerId !== pd.id) return; if (pd.drag) { pager.classList.remove('dragging'); suppressClick = true; setTimeout(() => { suppressClick = false; }, 0); end(); } pd = null; };
     pager.addEventListener('pointerup', up); pager.addEventListener('pointercancel', up);
     pager.addEventListener('keydown', ev => { if (ev.target !== pager) return; if (ev.key === 'ArrowRight' || ev.key === 'PageDown') { ev.preventDefault(); go(page[view] + 1); } else if (ev.key === 'ArrowLeft' || ev.key === 'PageUp') { ev.preventDefault(); go(page[view] - 1); } });
+  }
+  // The Looking ahead header keeps title, range toggle and arrows on one row: full size, then a size smaller, then wrapped.
+  function fitHeader(){
+    const hr = shell.querySelector('.db-headrow'); if (!hr || !hr.offsetWidth) return;
+    const [t, v, tl] = hr.children;
+    const ok = () => { const r = hr.getBoundingClientRect(), a = t.getBoundingClientRect(), b = v.getBoundingClientRect(), c = tl.getBoundingClientRect(); return b.left >= a.left + t.scrollWidth + 12 && b.right <= c.left - 12 && c.right <= r.right + 1 && b.top < a.bottom && c.top < a.bottom; };
+    for (const mode of ['full', 'tight', 'compact', 'wrap']) { hr.dataset.fit = mode; if (mode === 'wrap' || ok()) break; }
   }
   function fitColumns(){
     shell.querySelectorAll('.db-right .db-col-body').forEach(body => {
@@ -906,6 +1092,15 @@ export function mountDaybook(root, bridge = {}) {
     else if (a === 'undo') { const f = undoFn; undoFn = null; shell.querySelector('.db-toast')?.remove(); f?.(); }
     else if (a === 'unhide-all') { prefs = {dismissed: [], hiddenEvents: []}; savePrefs().catch(()=>{}); menu = false; render(); showToast('Everything hidden is back.'); }
     else if (a.startsWith('connect:')) connect(a.slice(8));
+    else if (a === 'ob-next') obNext();
+    else if (a === 'ob-skip') obNext(true);
+    else if (a === 'ob-back') obBack();
+    else if (a === 'ob-finish') obFinish();
+    else if (a.startsWith('ob-chip:')) { const t = a.slice(8); if (ob.picks.has(t)) ob.picks.delete(t); else ob.picks.add(t); b.setAttribute('aria-pressed', String(ob.picks.has(t))); }
+    else if (a.startsWith('ob-look:')) setTheme(a.slice(8));
+    else if (a === 'theme-toggle') setTheme(isDark() ? 'light' : 'dark');
+    else if (a.startsWith('theme:')) setTheme(a.slice(6));
+    else if (a === 'start-over') startOverClick(b);
     else if (a === 'setup-done' || a === 'setup-skip') { setupDismissed = true; if (!data) refresh(); else render(); }
     else if (a.startsWith('event:')) openDoc(side, {kind:'event', id:a.slice(6)}, b);
     else if (a.startsWith('note:')) openDoc(side, {kind:'note', id:a.slice(5)}, b);
@@ -923,14 +1118,14 @@ export function mountDaybook(root, bridge = {}) {
   });
   shell.addEventListener('keydown', ev => { const tab = ev.target.closest?.('[role="tab"]'); if (!tab || !['ArrowLeft','ArrowRight'].includes(ev.key)) return; const order = ['3','7','month'], i = order.indexOf(view); setView(order[(i + (ev.key==='ArrowRight'?1:2)) % 3]); });
   shell.addEventListener('change', ev => { const id = ev.target.dataset?.calendar; if (!id) return; ev.target.checked ? hidden.delete(id) : hidden.add(id); render(); shell.querySelector(`[data-calendar="${CSS.escape(id)}"]`)?.focus(); });
-  shell.addEventListener('input', ev => { if (ev.target.name==='context') contextDraft = ev.target.value; });
+  shell.addEventListener('input', ev => { if (ev.target.name==='context') contextDraft = ev.target.value; if (ev.target.name==='ob-book' && ob) ob.book = ev.target.value; });
   shell.addEventListener('submit', async ev => { ev.preventDefault();
     const add = ev.target.closest?.('.db-add');
     if (add) { const list = add.dataset.list, v = add.querySelector('input').value.trim(); if (list === 'near') interests.near = v; else if (v && !interests[list].some(x=>x.toLowerCase()===v.toLowerCase())) interests[list] = [...interests[list], v].slice(-20); try { await saveInterests(); } catch (err) { showToast(err.message || 'Could not save.'); } render({only:'left', focus:`.db-add[data-list="${list}"] input`}); if (!stacks.right.length) render({only:'right'}); showToast(list === 'reading' && v ? 'Added. Your agent will find time to read.' : 'Saved.'); return; } const input = shell.querySelector('[name="context"]'), value = input.value.trim(); if (!value) return;
     const wantsPlace = MUSEUM.test(value) || FOOD.test(value) || /\b(somewhere|places? to|things? to do|go out|nearby)\b/i.test(value);
     if (MOVE.test(value) || wantsPlace) { contextDraft = ''; bridge.context?.(value).catch(()=>{}); try { if (MOVE.test(value)) await createMovePlan(value); else { const r = rangeFromText(value); if (r) await createResearch(value, r); else { render(); showToast('No open time on that day. Try another day.'); } } } catch (err) { showToast(err.message || 'Could not plan that.'); } return; }
     try { if (bridge.context) await bridge.context(value); else data.notes.push({id:'local-'+Date.now(),date:today,time:clock(new Date()),type:'context',title:'For later',body:value}); contextDraft = ''; contextHint = ''; render(); showToast(bridge.context?'Kept for your agent.':'Kept in this preview only.'); } catch (err) { showToast(err.message||'Could not keep this note.'); } });
-  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { applyScale(); const p = shell.querySelector('.db-pager'); if (p && !animating) { setX(-page[view] * stepW()); fitColumns(); } }) : null; ro?.observe(shell);
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { applyScale(); fitHeader(); const p = shell.querySelector('.db-pager'); if (p && !animating) { setX(-page[view] * stepW()); fitColumns(); } }) : null; ro?.observe(shell);
   const scheme = typeof MutationObserver === 'function' ? new MutationObserver(() => shell.classList.toggle('dark', isDark())) : null; scheme?.observe(document.documentElement, {attributes:true, attributeFilter:['data-color-scheme','class','style']});
   const tick = setInterval(() => {
     if (dateKey(new Date()) !== today) { if (!stacks.left.length && !stacks.right.length) render(); return; }
@@ -940,7 +1135,21 @@ export function mountDaybook(root, bridge = {}) {
     if (n > re) { line.remove(); return; }
     line.style.top = `${((Math.max(n,rs)-rs)/(re-rs)*100).toFixed(3)}%`; line.querySelector('span').textContent = time(clock(new Date()));
   }, 30000);
-  render({cascade: true}); if (!data && !needsSetup()) refresh();
-  Promise.all([loadDocs(), loadInterests(), loadPlans(), loadPrefs()]).then(() => { render(); schedulePoll(); });
-  return { setServices(list){ const had = anyCalendar(); services = list; if (!had && anyCalendar() && !data) refresh(); else render(); }, update(next){ data = next; render(); }, dispose(){ disposed = true; clearInterval(skyTimer); clearTimeout(toastTimer); clearInterval(tick); cancelAnimationFrame(anim); ro?.disconnect(); scheme?.disconnect(); document.removeEventListener('selectionchange', placeBubble); root.replaceChildren(); } };
+  render({cascade: true});
+  document.fonts?.ready?.then(() => { if (!disposed) fitHeader(); });
+  Promise.all([loadDocs(), loadInterests(), loadPlans(), loadPrefs()]).then(async () => {
+    const who = person?.id || '';
+    if (who && prefs.owner && prefs.owner !== who) {
+      // A different Bonsai account opened this app: nothing of the last person's carries over.
+      try { await bridge.resetApp?.(); } catch {}
+      prefs = {dismissed: [], hiddenEvents: [], theme: 'auto', onboarded: false, owner: who}; interests = {reading: [], topics: [], near: ''}; docs = {}; plans = []; data = null;
+      savePrefs().catch(() => {});
+    } else if (who && !prefs.owner && (prefs.hasSnapshot || data)) { prefs.owner = who; if (prefs.onboarded === undefined) prefs.onboarded = true; savePrefs().catch(() => {}); }
+    const fresh = !!bridge.onboard || prefs.onboarded === false || (prefs.onboarded === undefined && !prefs.hasSnapshot && !data) || (!!services && !CAL.some(([id]) => svc(id)?.connected));
+    booted = true;
+    if (fresh) { if (!bridge.load) { demoData = data || demoData; data = null; services = services || PREVIEW_SERVICES(); } beginOnboarding(); }
+    else if (!data) refresh();
+    render(); schedulePoll();
+  });
+  return { setServices(list){ const had = anyCalendar(); services = list; if (!had && anyCalendar() && !data && booted) refresh(); else render(); }, setPerson(){ }, update(next){ data = next; render(); }, dispose(){ disposed = true; clearInterval(skyTimer); clearInterval(obTickTimer); clearTimeout(obTimer); clearTimeout(toastTimer); clearInterval(tick); cancelAnimationFrame(anim); ro?.disconnect(); scheme?.disconnect(); document.removeEventListener('selectionchange', placeBubble); root.replaceChildren(); } };
 }

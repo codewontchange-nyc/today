@@ -4,7 +4,7 @@
   "namespace": "daybook",
   "displayName": "Today",
   "description": "Your calendars in one calm view: today in focus, the days ahead prepared, and an agent that turns a passing thought into a plan.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "compatibility": {
     "sdk": "^0.13.7"
   },
@@ -131,6 +131,16 @@
               "responseSchema": {
                 "type": "object"
               }
+            },
+            {
+              "localId": "reset",
+              "displayName": "Start over as a new user",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
             }
           ]
         }
@@ -211,6 +221,12 @@
             "operations": [
               "register"
             ]
+          },
+          {
+            "endpoint": "reset",
+            "operations": [
+              "register"
+            ]
           }
         ],
         "storage": [
@@ -288,6 +304,12 @@
           },
           {
             "endpoint": "remove",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "reset",
             "operations": [
               "invoke"
             ]

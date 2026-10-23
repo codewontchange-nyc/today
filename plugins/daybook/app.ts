@@ -174,10 +174,19 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
       ensureStorage();
       if (!db) throw new Error(storageError || 'Storage access is needed before this can be saved.');
       const clean = (list: any, n: number) => (Array.isArray(list) ? list : []).slice(-n).map((d: any) => ({ id: String(d.id || '').slice(0, 200), title: String(d.title || '').slice(0, 200), at: String(d.at || '') })).filter((d: any) => d.id);
-      prefs = { dismissed: clean(payload.prefs.dismissed, 200), hiddenEvents: clean(payload.prefs.hiddenEvents, 300) };
+      const theme = ['auto', 'light', 'dark'].includes(payload.prefs.theme) ? payload.prefs.theme : 'auto';
+      prefs = { dismissed: clean(payload.prefs.dismissed, 200), hiddenEvents: clean(payload.prefs.hiddenEvents, 300), theme, owner: String(payload.prefs.owner || '').slice(0, 200), onboarded: typeof payload.prefs.onboarded === 'boolean' ? payload.prefs.onboarded : undefined };
       set('prefs', prefs);
     } else prefs = get('prefs') || prefs;
-    return prefs;
+    return { ...prefs, hasSnapshot: !!cache };
+  });
+  app.endpoints.register('reset', async () => {
+    // Start over: forget everything this app kept. Connections in Bonsai are untouched.
+    ensureStorage();
+    if (db) db.prepare('DELETE FROM daybook_state').run();
+    cache = null; contexts = []; docs = {}; interests = { reading: [], topics: [], near: '' }; plans = []; prefs = { dismissed: [], hiddenEvents: [] }; pending = null;
+    for (const k of Object.keys(accepted)) delete accepted[k];
+    return { reset: true };
   });
   app.endpoints.register('remove', async (payload: any) => {
     const ev = payload?.event;
