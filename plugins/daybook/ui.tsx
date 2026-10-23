@@ -161,6 +161,13 @@ function mountDaybook(root, bridge = {}) {
 .db-whom .db-ob-link{display:inline-block;margin-top:10px}
 .db-person{display:block;margin-bottom:7px}.db-person b{font-weight:500}.db-person small{display:block;font-size:11.5px;line-height:1.45;color:var(--db-muted)}
 .db-tag small{margin-left:4px;font-size:11px;color:var(--db-muted)}
+.db-seekcard{position:relative;overflow:hidden;padding:12px 14px 13px;border-radius:12px;border:1px dashed color-mix(in srgb,var(--db-ink) 32%,transparent);background:color-mix(in srgb,var(--db-card) 60%,transparent);animation:db-ob-arrive .4s var(--db-ease) both}
+.db-seekcard .db-eyebrow{display:flex;align-items:center;gap:6px}.db-seekcard strong{display:block;margin-top:5px;font-size:13.5px;font-weight:500;color:var(--db-ink-2)}
+.db-seek-bar{position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--db-ink),transparent) no-repeat;background-size:40% 100%;animation:db-seek-run 1.2s var(--db-ease) infinite;opacity:.55}
+@keyframes db-seek-run{from{background-position:-60% 0}to{background-position:160% 0}}
+.db-seek{position:absolute;left:0;right:0;z-index:2;overflow:hidden;border-radius:10px;border:1px dashed color-mix(in srgb,var(--db-ink) 38%,transparent);background:color-mix(in srgb,var(--db-ink) 5%,transparent);pointer-events:none;animation:db-ob-arrive .4s var(--db-ease) both}
+.db-seek span{position:absolute;top:6px;left:10px;font-size:11.5px;color:var(--db-ink-2)}.db-seek b{font-weight:600}
+.db-seekchip{border-style:dashed!important;opacity:.85}
 .db-sky{--sky-ink:rgba(32,44,39,.8);--sky-clay:#cf8a6a;--sky-sage:#a9b8a3;--sky-ochre:#dcb978;--sky-paper:#fbfaf6;position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;color:var(--sky-ink)}
 .db-sky.dark{--sky-ink:rgba(239,243,233,.78);--sky-clay:#b5745a;--sky-sage:#7f9079;--sky-ochre:#b89a5e;--sky-paper:#dcd6c8}
 .db-bird{position:absolute;width:calc(var(--bw)*var(--s,1));height:auto;opacity:.6;overflow:visible;animation:db-bird-fly var(--dur) linear var(--delay) infinite}
@@ -854,21 +861,48 @@ function mountDaybook(root, bridge = {}) {
   const ASK = /\?\s*$|^(what|when|how|am i|do i|is there|are there|show me|anything)\b|\b(am i (free|busy)|free time|how busy)\b/i;
   const PLACE = /\b(somewhere|places? to|(some|any)thing to do|things? to do|what to do|go out|nearby|explore)\b/i;
   const plain = text => { let t = String(text).trim(), prev; do { prev = t; t = t.replace(/^(hey|hi|ok|okay|so|please|can you|could you|would you|will you|i want to|i'd like to|i’d like to|i need to|help me|let's|let’s)\b[\s,]*/i, ''); } while (t !== prev); return t; };
+  let seek = null;
+  // Show the work: go to the day the request is about and hold a pending card at its time range.
+  async function locate(value, w, ev, kind){
+    const nowM = Math.ceil((mins(clock(new Date())) + 15) / 15) * 15;
+    let d = null, a = 0, b = 0;
+    if (ev && ev.start && (kind === 'prep' || kind === 'change')) { d = ev.date; a = mins(ev.start); b = mins(ev.end) ?? a + 60; }
+    else if (kind === 'place') { const r = rangeFor(value, w); if (r) { d = r.date; a = mins(r.start); b = mins(r.end); } }
+    else if (kind !== 'note' || w.days) {
+      d = (w.days && w.days[0]) || (w.at != null ? (w.at > nowM ? today : tomorrow) : (kind === 'ask' && !/\b(today|tonight)\b/i.test(value) ? tomorrow : today));
+      [a, b] = w.at != null ? [w.at, w.at + (w.duration || 60)] : (w.part || (kind === 'ask' || kind === 'note' ? [480, 1320] : [540, 1080]));
+    }
+    if (!d) return;
+    if (d === today) { a = Math.max(a, nowM); if (b <= a) b = Math.min(1440, a + 60); }
+    const many = (w.days || []).length > 1;
+    seek = {date: d, start: hm(a), end: hm(Math.min(b, 1440)), kicker: kind === 'change' ? 'Finding new times' : kind === 'place' ? 'Looking nearby' : kind === 'ask' ? 'Reading the day' : kind === 'prep' ? 'Preparing' : 'Looking', label: `${many ? cap(dayWord(d)) + ' and on · ' : ''}${time(hm(a))} to ${time(hm(Math.min(b, 1440)))}`};
+    if (stacks.right.length && d !== today) stacks.right = [];
+    if (d !== today && (view !== '3' || !visibleCol(d))) setView('3', d); else render();
+    await sleep(380);
+    const target = d === today ? shell.querySelector('.db-left .db-seek') : shell.querySelector('.db-right .db-seekcard');
+    if (target) { agentAt(target, 0.5, 0.5); if (d !== today) scanCol(d); await sleep(760); }
+  }
+  function endSeek(){ if (!seek) return; seek = null; render(); }
   async function routeRequest(raw){
     const value = plain(raw) || raw, w = parseWhen(value), ev = matchEvent(value);
     contextDraft = ''; contextHint = '';
-    if (PREP.test(value) && ev) return prepEvent(value, ev);
-    if (CHANGE.test(value) && ev && !/\bmove more\b/i.test(value)) return changeEvent(value, ev, w);
     if (whom) settleWhom('skip');
     const wantsPlace = MUSEUM.test(value) || FOOD.test(value) || PLACE.test(value), isAsk = ASK.test(value) && !BLOCK_LEAD.test(value) && !MOVE.test(value) && !wantsPlace;
-    const who = isAsk || !findMentions(value).length ? [] : await resolvePeople(value);
-    if (BLOCK_LEAD.test(value) && !MOVE.test(value)) return blockRequest(value, w, who);
-    if (MOVE.test(value)) { bridge.context?.(value).catch(() => {}); const cfg = moveCfg(stripPeople(value, who), w); if (who.length) { const nm = cfg.name; cfg.name = k => nm(k) + withWho(who); cfg.title += withWho(who); } return createTimePlan(value, cfg); }
-    if (wantsPlace) { bridge.context?.(value).catch(() => {}); const r = rangeFor(value, w); if (r) return createResearch(value, r, who); render(); showToast(`No open time ${w.days ? dayWord(w.days[0]) : 'today'} for that. Try another day.`); return; }
-    if (isAsk) return answerDay(value, w);
-    if (BLOCK_CUE.test(value) || w.duration || (w.at != null && w.days)) return blockRequest(value, w, who);
-    return keepNote(value, who);
+    const kind = PREP.test(value) && ev ? 'prep' : CHANGE.test(value) && ev && !/\bmove more\b/i.test(value) ? 'change' : BLOCK_LEAD.test(value) && !MOVE.test(value) ? 'block' : MOVE.test(value) ? 'move' : wantsPlace ? 'place' : isAsk ? 'ask' : (BLOCK_CUE.test(value) || w.duration || (w.at != null && w.days)) ? 'block' : 'note';
+    setWorking({prep: 'Finding the event', change: 'Finding the event', block: 'Finding the time', move: 'Finding the time', place: 'Finding the day', ask: 'Reading the day', note: 'Keeping this'}[kind] + '…');
+    try {
+      await locate(value, w, ev, kind);
+      if (kind === 'prep') return prepEvent(value, ev);
+      if (kind === 'change') return await changeEvent(value, ev, w);
+      const who = isAsk || !findMentions(value).length ? [] : await resolvePeople(value);
+      if (kind === 'block') return await blockRequest(value, w, who);
+      if (kind === 'move') { bridge.context?.(value).catch(() => {}); const cfg = moveCfg(stripPeople(value, who), w); if (who.length) { const nm = cfg.name; cfg.name = k => nm(k) + withWho(who); cfg.title += withWho(who); } return await createTimePlan(value, cfg); }
+      if (kind === 'place') { bridge.context?.(value).catch(() => {}); const r = rangeFor(value, w); if (r) return await createResearch(value, r, who); render(); showToast(`No open time ${w.days ? dayWord(w.days[0]) : 'today'} for that. Try another day.`); return; }
+      if (kind === 'ask') return answerDay(value, w);
+      return await keepNote(value, who);
+    } finally { agentOff(); if (working && !plans.some(p => p.status === 'working')) setWorking(''); endSeek(); }
   }
+
   async function keepNote(value, who = []){
     const about = who.length ? ` (about ${who.map(q => q.name + (q.email ? ' <' + q.email + '>' : '')).join(', ')})` : '';
     if (bridge.context) await bridge.context(value + about); else data.notes.push({id: 'local-' + Date.now(), date: today, time: clock(new Date()), type: 'context', title: who.length ? `For later${withWho(who).replace(' with ', ' · ')}` : 'For later', body: value});
@@ -1062,7 +1096,7 @@ function mountDaybook(root, bridge = {}) {
     const notes = [...timed.filter(t=>t.kind==='reply').slice(-1), ...mine, ...rest.filter(t=>!mine.includes(t))].slice(0, setupLeft().length ? 2 : 3).map(t=>`<div class="db-notewrap"><button class="db-note ${t.x.type==='reply'?'reply':''} ${t.x.working?'working':''} ${fresh.has(t.x.id)?'db-fresh':''}" data-action="${t.x.type==='reply'?'plan:'+e(t.x.planId):'note:'+e(t.x.id)}"><span class="db-eyebrow"><i style="background-position:${t.x.type==='artifact'?'38%':t.x.type==='reply'?'15%':'70%'} 50%"></i>${t.x.type==='artifact'?'Prepared':t.x.type==='rest'?'Suggestion':t.x.type==='reply'?'From your agent':'Note'}</span><strong>${e(t.x.title)}</strong><span class="db-clamp">${e(t.x.body)}</span>${t.x.artifact?`<span class="db-link">${ic('doc')}${e(t.x.label||'Open brief')}</span>`:''}${t.x.type==='reply'?`<span class="db-link">${(plans.find(p=>p.id===t.x.planId)?.kind||'research')!=='research'?'See the times':'See the plan'}</span>`:''}</button><button class="db-x" data-action="dismiss:${e(t.x.id)}" aria-label="Dismiss" title="Dismiss">×</button></div>`).join('');
     const upcoming = events.filter(v=>v.e>nowMin).length, biggest = gaps.slice().sort((a,b)=>(b[1]-b[0])-(a[1]-a[0]))[0];
     const allLine = [...markers.map(x=>x.title), ...allDay.map(x=>x.title)];
-    return `<section class="db-left" aria-label="Today"><header class="db-head"><p class="db-eyebrow">${label(today,{weekday:'long'})} · ${label(today,{month:'long',day:'numeric',year:'numeric'})}</p><h1 class="db-title">Today</h1><p class="db-sub"><span><b>${upcoming}</b> still ahead</span>${biggest?`<span>Open from <b>${time(hm(biggest[0]))}</b> to <b>${time(hm(biggest[1]))}</b></span>`:''}</p>${allLine.length?`<p class="db-allday">All day · ${e(allLine.join(' · '))}</p>`:''}<div class="db-tools"><button class="db-icon" data-action="theme-toggle" aria-pressed="${isDark()}" aria-label="${isDark()?'Light mode':'Dark mode'}" title="${isDark()?'Light mode':'Dark mode'}">${ic(isDark()?'sun':'moon')}</button><button class="db-icon" data-action="interests" aria-label="Interests and reading">${ic('leaf')}</button><button class="db-icon" data-action="menu" aria-label="Calendars and sources" aria-expanded="${menu}">${ic('more')}</button></div></header>${menu?menuView():''}<div class="db-today"><div class="db-plot" data-rs="${rs}" data-re="${re}">${hours}<div class="db-track">${open}<div class="db-sel" ${pendingRange&&pendingRange.date===today?`style="top:${pct(mins(pendingRange.start))}%;height:${(mins(pendingRange.end)-mins(pendingRange.start))/total*100}%"`:'hidden'}><span>${pendingRange&&pendingRange.date===today?`${time(pendingRange.start)} to ${time(pendingRange.end)}`:''}</span></div>${placed.length?blocks:`<p class="db-empty">Nothing timed in your visible calendars today.${hidden.size?' Some calendars are hidden.':''}</p>`}</div><div class="db-notes">${newer ? `<div class="db-setup-card db-update"><span class="db-eyebrow">${ic('spark')}Update · ${e(newer)}</span><strong>A new version of Today is ready</strong><span class="db-setup-go">In App Store, open Sources, then today, and press Check for updates.</span></div>` : ''}${setupLeft().length ? `<button class="db-setup-card" data-action="setup-resume"><span class="db-eyebrow">${ic('spark')}Setup · ${4 - setupLeft().length} of 4 done</span><strong>Finish setting up Today</strong><span class="db-setup-go">Continue<span class="db-ob-arr" aria-hidden="true">→</span></span></button>` : ''}${notes}<div class="db-plinth" aria-hidden="true">${scene('stones')}</div></div>${nowMin>=rs&&nowMin<=re?`<div class="db-now" style="top:${pct(nowMin)}%"><span>${time(clock(new Date()))}</span></div>`:''}</div></div></section>`;
+    return `<section class="db-left" aria-label="Today"><header class="db-head"><p class="db-eyebrow">${label(today,{weekday:'long'})} · ${label(today,{month:'long',day:'numeric',year:'numeric'})}</p><h1 class="db-title">Today</h1><p class="db-sub"><span><b>${upcoming}</b> still ahead</span>${biggest?`<span>Open from <b>${time(hm(biggest[0]))}</b> to <b>${time(hm(biggest[1]))}</b></span>`:''}</p>${allLine.length?`<p class="db-allday">All day · ${e(allLine.join(' · '))}</p>`:''}<div class="db-tools"><button class="db-icon" data-action="theme-toggle" aria-pressed="${isDark()}" aria-label="${isDark()?'Light mode':'Dark mode'}" title="${isDark()?'Light mode':'Dark mode'}">${ic(isDark()?'sun':'moon')}</button><button class="db-icon" data-action="interests" aria-label="Interests and reading">${ic('leaf')}</button><button class="db-icon" data-action="menu" aria-label="Calendars and sources" aria-expanded="${menu}">${ic('more')}</button></div></header>${menu?menuView():''}<div class="db-today"><div class="db-plot" data-rs="${rs}" data-re="${re}">${hours}<div class="db-track">${open}${seek && seek.date===today ? `<div class="db-seek" style="top:${pct(mins(seek.start))}%;height:${Math.max(4, (mins(seek.end)-mins(seek.start))/total*100)}%"><span><b>${e(seek.kicker)}</b> ${e(seek.label)}</span><i class="db-seek-bar"></i></div>` : ''}<div class="db-sel" ${pendingRange&&pendingRange.date===today?`style="top:${pct(mins(pendingRange.start))}%;height:${(mins(pendingRange.end)-mins(pendingRange.start))/total*100}%"`:'hidden'}><span>${pendingRange&&pendingRange.date===today?`${time(pendingRange.start)} to ${time(pendingRange.end)}`:''}</span></div>${placed.length?blocks:`<p class="db-empty">Nothing timed in your visible calendars today.${hidden.size?' Some calendars are hidden.':''}</p>`}</div><div class="db-notes">${newer ? `<div class="db-setup-card db-update"><span class="db-eyebrow">${ic('spark')}Update · ${e(newer)}</span><strong>A new version of Today is ready</strong><span class="db-setup-go">In App Store, open Sources, then today, and press Check for updates.</span></div>` : ''}${setupLeft().length ? `<button class="db-setup-card" data-action="setup-resume"><span class="db-eyebrow">${ic('spark')}Setup · ${4 - setupLeft().length} of 4 done</span><strong>Finish setting up Today</strong><span class="db-setup-go">Continue<span class="db-ob-arr" aria-hidden="true">→</span></span></button>` : ''}${notes}<div class="db-plinth" aria-hidden="true">${scene('stones')}</div></div>${nowMin>=rs&&nowMin<=re?`<div class="db-now" style="top:${pct(nowMin)}%"><span>${time(clock(new Date()))}</span></div>`:''}</div></div></section>`;
   }
   function itemLarge(t, crowded){
     const x = t.x;
@@ -1089,6 +1123,7 @@ function mountDaybook(root, bridge = {}) {
       const slots = gapsIn(busyOn(d), from, 1320, 30).map(([a,b2]) => { const st = Math.ceil(a/15)*15; return {at: st - .5, html:`<div class="db-slotwrap"><button class="db-slot" data-action="newevent:${d}:${hm(st)}-${hm(b2)}" aria-label="New event on ${label(d,{weekday:'long'})}, open ${time(hm(st))} to ${time(hm(b2))}" title="New event"><i class="db-slot-line"></i><span class="db-slot-plus">${ic('plus')}</span></button></div>`}; }).filter(x => x.html);
       items = [...items, ...slots].sort((p,q)=>p.at-q.at);
     }
+    if (seek && seek.date === d) { items.push({at: mins(seek.start) - 0.3, html: large ? `<div class="db-seekcard" role="status"><span class="db-eyebrow">${e(seek.kicker)}<em class="db-dots"><b></b><b></b><b></b></em></span><strong>${e(seek.label)}</strong><i class="db-seek-bar"></i></div>` : `<span class="db-chip db-seekchip"><b>${e(seek.kicker)}…</b></span>`}); items.sort((p0, q0) => p0.at - q0.at); }
     items = items.map(x=>x.html).join('');
     const more = timed.length>limit ? `<button class="db-more" data-action="day:${d}">+${timed.length-limit} more</button>` : '';
     const empty = !loaded ? '<span class="db-quiet">Not loaded yet.</span>' : (!timed.length && !allDay.length ? (large ? `<button class="db-tile db-openday" data-action="day:${d}"><span class="db-frame">${scene('sand')}</span><span class="db-cap"><span class="db-eyebrow">Open day</span><strong>Nothing planned yet.</strong></span></button>` : '<span class="db-quiet">Open</span>') : '');
@@ -1529,7 +1564,7 @@ function TodayPage() {
         if (!result?.created) throw new Error(result?.message || 'The event was not added.');
         return result;
       },
-      version: "0.11.2",
+      version: "0.11.3",
       latest: async () => ((await kayApi.invokeExtensionEndpoint('daybook.latest', {})) as any)?.version || '',
       loadPrefs: () => kayApi.invokeExtensionEndpoint('daybook.prefs', {}),
       loadPeople: async () => ((await kayApi.invokeExtensionEndpoint('daybook.people', {})) as any)?.people ?? [],
