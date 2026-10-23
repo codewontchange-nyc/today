@@ -2,7 +2,7 @@
   "protocol": "kay.plugin.v1",
   "id": "com.cam.daybook",
   "displayName": "Today",
-  "version": "0.12.7",
+  "version": "0.13.0",
   "description": "Your calendars in one calm view: today in focus, the days ahead prepared, and an agent that turns a passing thought into a plan.",
   "icon": "./store-icon.svg",
   "namespace": "daybook",
@@ -173,12 +173,48 @@
                 "type": "object"
               }
             }
+          ],
+          "eventDefinitions": [
+            {
+              "localId": "updated",
+              "displayName": "Today updated",
+              "description": "Research, briefs or the calendar finished updating in the background.",
+              "version": 1,
+              "payloadSchema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  },
+                  "at": {
+                    "type": "string"
+                  },
+                  "planId": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            }
           ]
         }
       },
       "ui": {
         "entrypoint": {
           "module": "./ui.tsx"
+        },
+        "contributes": {
+          "eventSubscriptions": [
+            {
+              "localId": "updates",
+              "event": "self:updated"
+            }
+          ]
         }
       }
     }
@@ -287,6 +323,14 @@
               "write"
             ]
           }
+        ],
+        "events": [
+          {
+            "event": "updated",
+            "operations": [
+              "publish"
+            ]
+          }
         ]
       },
       "kay.ui": {
@@ -379,6 +423,14 @@
             "endpoint": "latest",
             "operations": [
               "invoke"
+            ]
+          }
+        ],
+        "events": [
+          {
+            "event": "self:updated",
+            "operations": [
+              "subscribe"
             ]
           }
         ]

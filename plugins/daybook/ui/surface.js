@@ -658,18 +658,30 @@ export function mountDaybook(root, bridge = {}) {
   const findNote = id => allNotes().find(n=>n.id===id) || plans.flatMap(p=>p.items||[]).find(n=>n.id===id);
   async function loadPlans(){ try { const v = bridge.loadPlans ? await bridge.loadPlans() : JSON.parse(localStorage.getItem(PLAN_KEY) || '[]'); if (Array.isArray(v)) plans = humanizePlans(v); } catch {} }
   async function savePlans(){ if (bridge.savePlans) await bridge.savePlans(plans); else localStorage.setItem(PLAN_KEY, JSON.stringify(plans)); }
+  let bgRefreshing = false;
+  async function syncPlans(){
+    const was = plans.map(p=>p.id+p.status).join();
+    await loadPlans();
+    if (plans.map(p=>p.id+p.status).join() === was) return;
+    render(); const done = plans.find(p=>p.kind==='research' && p.status==='ready' && !p.seen);
+    if (done) { done.seen = true; fresh.add(`plan-${done.id}`); fresh.add(`reply-${done.id}`); render(); fresh.delete(`plan-${done.id}`); fresh.delete(`reply-${done.id}`); if (!stacks.right.length) setTimeout(() => openDoc('right', {kind:'plan', id:done.id}), 900); showToast(`Options are ready · ${done.title}`); }
+    if (!plans.some(p=>p.status==='researching')) clearInterval(planPoll);
+  }
   function schedulePoll(){
     clearInterval(planPoll);
     if (!bridge.loadPlans || !plans.some(p=>p.status==='researching')) return;
-    planPoll = setInterval(async () => {
-      const was = plans.map(p=>p.id+p.status).join();
-      await loadPlans();
-      if (plans.map(p=>p.id+p.status).join() === was) return;
-      render(); const done = plans.find(p=>p.kind==='research' && p.status==='ready' && !p.seen);
-      if (done) { done.seen = true; fresh.add(`plan-${done.id}`); fresh.add(`reply-${done.id}`); render(); fresh.delete(`plan-${done.id}`); fresh.delete(`reply-${done.id}`); if (!stacks.right.length) setTimeout(() => openDoc('right', {kind:'plan', id:done.id}), 900); showToast(`Options are ready · ${done.title}`); }
-      if (!plans.some(p=>p.status==='researching')) clearInterval(planPoll);
-    }, 45000);
+    planPoll = setInterval(syncPlans, 45000);
   }
+  // Pushed from the background side the moment something finishes; pull only what changed.
+  function pushed(ev){
+    if (!ev || disposed) return;
+    const foot = () => { const f = shell.querySelector('.db-foot > span'); if (f) f.textContent = bgRefreshing || busy ? 'Updating…' : sourceLine(); };
+    if (ev.kind === 'refreshing') { bgRefreshing = true; foot(); return; }
+    if (ev.kind === 'refresh-failed') { bgRefreshing = false; foot(); return; }
+    if (ev.kind === 'snapshot') { bgRefreshing = false; if (busy || !bridge.load) { foot(); return; } bridge.load({refresh: false}).then(next => { if (disposed || !next || ob) return; data = humanizeData(next); render(); }).catch(() => foot()); return; }
+    if (ev.kind === 'plan') syncPlans().catch(() => {});
+  }
+
   function writableCal(){ return (data?.calendars||[]).find(k=>k.writable && k.kind==='primary') || {}; }
   function blockFor(title, date, start, len, pref){ const c = (pref && pref.writable) ? pref : writableCal(); return {title, date, start:hm(start), end:hm(start+len), accountId:c.accountId||'', calendarId:c.calendarId||'primary', provider:c.provider||'gcal'}; }
   function gapsIn(evs, from, to, min){
@@ -1241,7 +1253,7 @@ export function mountDaybook(root, bridge = {}) {
   }
   function aheadView(){
     const tabs = [['3','3 days'],['7','Week'],['month','Month']];
-    return `<section class="db-right" aria-label="Looking ahead"><header class="db-head">${busy?'<i class="db-progress" aria-hidden="true"></i>':''}<p class="db-eyebrow">${isBack(view,page[view])?'What you learned':'Plan gently'}</p><div class="db-headrow"><h2 class="db-title" data-back="${isBack(view,page[view])}">${isBack(view,page[view])?'Looking back':'Looking ahead'}</h2><div class="db-views" role="tablist" aria-label="Looking ahead range" style="--tab:${tabs.findIndex(t=>t[0]===view)}">${tabs.map(([v,l])=>`<button role="tab" aria-selected="${v===view}" data-action="view:${v}" tabindex="${v===view?0:-1}">${l}</button>`).join('')}<i aria-hidden="true"></i></div><div class="db-tools"><button class="db-home" data-action="home" hidden>Tomorrow</button><span class="db-range" aria-live="polite"></span><button class="db-icon" data-action="previous" aria-label="Previous">${ic('left')}</button><button class="db-icon" data-action="next" aria-label="Next">${ic('right')}</button></div></div></header><div class="db-pager" tabindex="0" aria-roledescription="carousel" aria-label="Looking ahead. Swipe or use the arrow keys to move between pages."><div class="db-rail">${pages()}</div></div><div class="db-promptwrap">${whom ? whomView() : ''}<form class="db-context"><input name="context" value="${e(contextDraft)}" aria-label="Leave context for the agent" placeholder="${e(contextHint||'Ask for something, like a museum Saturday afternoon…')}" autocomplete="off" maxlength="1000"><button type="submit" aria-label="Save context">${ic('up')}</button></form></div><footer class="db-foot"><span>${busy?'Updating…':e(sourceLine())}</span><button data-action="status">${data.snapshot?'Snapshot':'Updated'} · ${new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}).format(new Date(data.fetchedAt||Date.now()))}</button></footer></section>`;
+    return `<section class="db-right" aria-label="Looking ahead"><header class="db-head">${busy?'<i class="db-progress" aria-hidden="true"></i>':''}<p class="db-eyebrow">${isBack(view,page[view])?'What you learned':'Plan gently'}</p><div class="db-headrow"><h2 class="db-title" data-back="${isBack(view,page[view])}">${isBack(view,page[view])?'Looking back':'Looking ahead'}</h2><div class="db-views" role="tablist" aria-label="Looking ahead range" style="--tab:${tabs.findIndex(t=>t[0]===view)}">${tabs.map(([v,l])=>`<button role="tab" aria-selected="${v===view}" data-action="view:${v}" tabindex="${v===view?0:-1}">${l}</button>`).join('')}<i aria-hidden="true"></i></div><div class="db-tools"><button class="db-home" data-action="home" hidden>Tomorrow</button><span class="db-range" aria-live="polite"></span><button class="db-icon" data-action="previous" aria-label="Previous">${ic('left')}</button><button class="db-icon" data-action="next" aria-label="Next">${ic('right')}</button></div></div></header><div class="db-pager" tabindex="0" aria-roledescription="carousel" aria-label="Looking ahead. Swipe or use the arrow keys to move between pages."><div class="db-rail">${pages()}</div></div><div class="db-promptwrap">${whom ? whomView() : ''}<form class="db-context"><input name="context" value="${e(contextDraft)}" aria-label="Leave context for the agent" placeholder="${e(contextHint||'Ask for something, like a museum Saturday afternoon…')}" autocomplete="off" maxlength="1000"><button type="submit" aria-label="Save context">${ic('up')}</button></form></div><footer class="db-foot"><span>${busy||bgRefreshing?'Updating…':e(sourceLine())}</span><button data-action="status">${data.snapshot?'Snapshot':'Updated'} · ${new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}).format(new Date(data.fetchedAt||Date.now()))}</button></footer></section>`;
   }
   function sourceLine(){
     const p = data.coverage?.providers || [];
@@ -1618,5 +1630,5 @@ export function mountDaybook(root, bridge = {}) {
     else if (!data) refresh();
     render(); schedulePoll(); checkLatest();
   });
-  return { setServices(list){ const had = anyCalendar(); services = list; if (!had && anyCalendar() && !data && booted) refresh(); else render(); }, setPerson(){ }, update(next){ data = humanizeData(next); render(); }, dispose(){ disposed = true; mossLayer.remove(); clearInterval(skyTimer); clearInterval(obTickTimer); clearTimeout(obTimer); clearTimeout(toastTimer); clearInterval(tick); cancelAnimationFrame(anim); ro?.disconnect(); scheme?.disconnect(); document.removeEventListener('selectionchange', placeBubble); root.replaceChildren(); } };
+  return { setServices(list){ const had = anyCalendar(); services = list; if (!had && anyCalendar() && !data && booted) refresh(); else render(); }, setPerson(){ }, update(next){ data = humanizeData(next); render(); }, pushed, dispose(){ disposed = true; mossLayer.remove(); clearInterval(skyTimer); clearInterval(obTickTimer); clearTimeout(obTimer); clearTimeout(toastTimer); clearInterval(tick); cancelAnimationFrame(anim); ro?.disconnect(); scheme?.disconnect(); document.removeEventListener('selectionchange', placeBubble); root.replaceChildren(); } };
 }

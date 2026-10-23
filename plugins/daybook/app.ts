@@ -62,8 +62,13 @@ export default function activate(app: any) {
     if (out.kind !== 'ran' || out.state !== 'completed' || !out.result) throw new Error(out.errorMessage || out.reason || 'The agent did not complete. Your last calendar view has been kept.');
     return out;
   };
+  // Tell Today's interface the moment something finishes in the background.
+  const notify = (kind: string, extra: any = {}) => { try { app.events?.publish?.('updated', { kind, at: new Date().toISOString(), ...extra }); } catch {} };
+  let refreshTimer: any = null;
+  const refreshSoon = (ms = 1500) => { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => { fetchSnapshot().catch(() => {}); }, ms); };
   const fetchSnapshot = async () => {
     if (pending) return pending;
+    notify('refreshing');
     const w = refreshWindow();
     pending = (async () => {
       const out = await runSession({
@@ -104,8 +109,10 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
       if (storageError) next.coverage.note += ' ' + storageError;
       cache = next;
       set('snapshot', cache);
+      notify('snapshot');
       return cache;
     })().catch((error: any) => {
+      notify('refresh-failed', { message: String(error?.message || '').slice(0, 300) });
       if (cache) return { ...cache, snapshot: true, coverage: { ...cache.coverage, note: cache.coverage.note + ' The latest refresh did not finish: ' + error.message } };
       throw error;
     }).finally(() => { pending = null; });
@@ -116,7 +123,8 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
     contexts = get('contexts') || contexts;
     Object.assign(accepted, get('accepted') || {});
     const stale = !cache || !cache.fetchedAt || Date.now() - Date.parse(cache.fetchedAt) > 30 * 60 * 1000;
-    if (payload?.refresh || stale) return fetchSnapshot();
+    if (payload?.refresh || !cache) return fetchSnapshot();
+    if (stale) refreshSoon(300);
     return cache;
   });
   app.endpoints.register('docs', async () => { docs = get('docs') || docs; return docs; });
@@ -135,7 +143,7 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
     const plan = payload?.plan; const r = plan?.range;
     if (!plan?.id || !r || !/^\d{4}-\d{2}-\d{2}$/.test(r.date) || !/^\d{2}:\d{2}$/.test(r.start) || !/^\d{2}:\d{2}$/.test(r.end)) throw new Error('This research request is missing a day and time.');
     ensureStorage();
-    plans = [...plans.filter((p: any) => p.id !== plan.id), { ...plan, status: 'researching', items: [] }].slice(-40); savePlans();
+    plans = [...plans.filter((p: any) => p.id !== plan.id), { ...plan, status: 'researching', items: [] }].slice(-40); savePlans(); notify('plan', { planId: String(plan.id) });
     const option = object({ name: string, address: string, why: string, url: string, walk: string }, ['name', 'address', 'why']);
     runSession({
       purpose: 'daybook-research', label: 'Look into ' + String(plan.noun || 'options'), model: 'medium', timeoutMs: 600000,
@@ -146,8 +154,8 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
       const c = (cache?.calendars || []).find((k: any) => k.writable && k.kind === 'primary') || {};
       const toMin = (v: string) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3, 5));
       plans = plans.map((p: any) => p.id !== plan.id ? p : { ...p, status: 'ready', note: out.result.note || '', reply: 'Options are ready.', replyBody: `${out.result.options.length} ${p.noun} for ${r.date} at ${r.start}.`, items: out.result.options.slice(0, 6).map((o: any, i: number) => ({ id: `${plan.id}-${i}`, planId: plan.id, type: 'idea', ideaKind: 'place', date: r.date, time: r.start, title: o.name, body: o.why, address: o.address, url: o.url || '', walk: o.walk || '', suggestion: { title: o.name, date: r.date, start: r.start, end: r.end, accountId: c.accountId || '', calendarId: c.calendarId || 'primary', provider: c.provider || 'gcal' }, durationMin: toMin(r.end) - toMin(r.start) })) });
-      savePlans();
-    }).catch((err: any) => { plans = plans.map((p: any) => p.id !== plan.id ? p : { ...p, status: 'failed', error: err.message || 'The research did not finish.' }); savePlans(); });
+      savePlans(); notify('plan', { planId: String(plan.id) });
+    }).catch((err: any) => { plans = plans.map((p: any) => p.id !== plan.id ? p : { ...p, status: 'failed', error: err.message || 'The research did not finish.' }); savePlans(); notify('plan', { planId: String(plan.id) }); });
     return { queued: true };
   });
   app.endpoints.register('create', async (payload: any) => {
@@ -170,6 +178,7 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
       if (!result.created || !result.eventUri) throw new Error(result.message || 'The event was not added.');
       accepted[key] = result; set('accepted', accepted);
       if (cache?.events) { cache.events.push({ id: 'created-' + key, sourceId: (cache.calendars.find((c: any) => c.accountId === clean.accountId && (c.calendarId === clean.calendarId || c.id === clean.calendarId)) || {}).id, accountId: clean.accountId, date: clean.date, start: clean.start, end: clean.end, title: clean.title, location: clean.location, description: clean.description, uri: result.eventUri }); set('snapshot', cache); }
+      refreshSoon(4000);
       return result;
     })().finally(() => inFlight.delete(key));
     inFlight.set(key, request);
@@ -245,6 +254,7 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
     const result: any = out.result;
     if (!result.deleted) throw new Error(result.message || 'The event was not deleted.');
     if (cache?.events) { cache.events = cache.events.filter((x: any) => x.id !== ev.id); set('snapshot', cache); }
+    refreshSoon(4000);
     return result;
   });
   app.endpoints.register('interests', async (payload: any) => {
@@ -278,6 +288,7 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
     if (!db) throw new Error(storageError || 'Storage access is needed before a note can be kept for later.');
     contexts = [...contexts.slice(-49), { text, at: new Date().toISOString() }];
     set('contexts', contexts);
+    if (/^Prepare a brief/i.test(text)) refreshSoon(1500);
     return { saved: true };
   });
   app.endpoints.register('reserve', async (payload: any) => {
@@ -303,11 +314,18 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
       const result: any = out.result;
       if (!result.created || !result.eventUri) throw new Error(result.message || 'The block was not created.');
       accepted[key] = result; set('accepted', accepted);
-      cache = null; set('snapshot', null);
+      refreshSoon(4000);
       return result;
     })().finally(() => inFlight.delete(key));
     inFlight.set(key, request);
     return request;
   });
-  app.lifecycle.onDispose(() => { try { db?.close(); } catch {} });
+  const hourly = setInterval(() => {
+    try {
+      const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
+      const age = cache?.fetchedAt ? Date.now() - Date.parse(cache.fetchedAt) : Infinity;
+      if (cache && !pending && h >= 7 && h < 22 && age > 55 * 60 * 1000) fetchSnapshot().catch(() => {});
+    } catch {}
+  }, 10 * 60 * 1000);
+  app.lifecycle.onDispose(() => { clearInterval(hourly); clearTimeout(refreshTimer); try { db?.close(); } catch {} });
 }
