@@ -141,6 +141,8 @@ export function mountDaybook(root, bridge = {}) {
 .db-seek{position:absolute;left:0;right:0;z-index:2;overflow:hidden;border-radius:10px;border:1px dashed color-mix(in srgb,var(--db-ink) 38%,transparent);background:color-mix(in srgb,var(--db-ink) 5%,transparent);pointer-events:none;animation:db-ob-arrive .4s var(--db-ease) both}
 .db-seek span{position:absolute;top:6px;left:10px;font-size:11.5px;color:var(--db-ink-2)}.db-seek b{font-weight:600}
 .db-seekchip{border-style:dashed!important;opacity:.85}
+/* Bonsai fades page tops under the tab strip; Today never scrolls, so hide that fade in Today's own pane only. */
+[data-pane-body]:has(.db)>.pane-body-top-fade{display:none}
 .db-moss{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}.db-moss img{position:absolute;display:block;user-select:none;-webkit-user-drag:none}
 @media(max-width:860px){.db-moss{display:none}}
 .db-sky{--sky-ink:rgba(32,44,39,.8);--sky-clay:#cf8a6a;--sky-sage:#a9b8a3;--sky-ochre:#dcb978;--sky-paper:#fbfaf6;position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;color:var(--sky-ink)}
