@@ -113,6 +113,15 @@ export function mountDaybook(root, bridge = {}) {
 @keyframes db-ob-arrive{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes db-ob-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @media(max-width:860px){.db-ob{height:auto;min-height:100%}.db-ob-points,.db-ob-looks{grid-template-columns:1fr}.db-ob-title{font-size:32px}.db-ob-top,.db-ob-stage{padding-left:24px;padding-right:24px}}
+.db-morph{animation:db-become 1s var(--db-glide) both}
+@keyframes db-become{0%{background-color:transparent;box-shadow:inset 0 0 0 1px var(--db-hair-2);transform:scale(.97)}55%{transform:scale(1.02)}100%{transform:none}}
+.db-morph .db-aura{animation:db-aura-in 1.4s var(--db-ease) .15s both}
+@keyframes db-aura-in{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+.db-setup-card{display:block;width:100%;margin-bottom:22px;padding:14px 16px 15px;border-radius:14px;border:1px solid var(--db-hair-2);background:var(--db-card);box-shadow:var(--db-shadow);text-align:left;transition:transform .45s var(--db-spring),box-shadow .3s var(--db-ease);animation:db-ob-arrive .6s var(--db-ease) .3s both}
+.db-setup-card:hover{transform:translateY(-2px);box-shadow:var(--db-shadow-lift)}
+.db-setup-card .db-eyebrow{display:flex;align-items:center;gap:6px}.db-setup-card .db-eyebrow svg{width:13px;height:13px;color:var(--db-terracotta)}
+.db-setup-card strong{display:block;margin-top:7px;font-family:var(--db-serif);font-weight:400;font-size:19px;line-height:1.2;color:var(--db-ink)}
+.db-setup-go{display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:12.5px;color:var(--db-ink-2)}.db-setup-card:hover .db-ob-arr{transform:translateX(4px)}
 .db-sky{--sky-ink:rgba(32,44,39,.8);--sky-clay:#cf8a6a;--sky-sage:#a9b8a3;--sky-ochre:#dcb978;--sky-paper:#fbfaf6;position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;color:var(--sky-ink)}
 .db-sky.dark{--sky-ink:rgba(239,243,233,.78);--sky-clay:#b5745a;--sky-sage:#7f9079;--sky-ochre:#b89a5e;--sky-paper:#dcd6c8}
 .db-bird{position:absolute;width:calc(var(--bw)*var(--s,1));height:auto;opacity:.6;overflow:visible;animation:db-bird-fly var(--dur) linear var(--delay) infinite}
@@ -261,9 +270,22 @@ export function mountDaybook(root, bridge = {}) {
   const PREFS_KEY = 'daybook-prefs'; let prefs = {dismissed: [], hiddenEvents: [], theme: 'auto'}, undoFn = null;
   const isDismissed = id => prefs.dismissed.some(d => d.id === id);
   const isHiddenEv = id => prefs.hiddenEvents.some(d => d.id === id);
-  async function loadPrefs(){ try { const v = bridge.loadPrefs ? await bridge.loadPrefs() : JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); if (v) prefs = {dismissed: v.dismissed || [], hiddenEvents: v.hiddenEvents || [], theme: ['auto','light','dark'].includes(v.theme) ? v.theme : 'auto', owner: v.owner || '', onboarded: v.onboarded, hasSnapshot: v.hasSnapshot}; } catch {} }
+  async function loadPrefs(){ try { const v = bridge.loadPrefs ? await bridge.loadPrefs() : JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); if (v) { prefs = {dismissed: v.dismissed || [], hiddenEvents: v.hiddenEvents || [], theme: ['auto','light','dark'].includes(v.theme) ? v.theme : 'auto', owner: v.owner || '', onboarded: v.onboarded, hasSnapshot: v.hasSnapshot, setup: v.setup || {}, accepted: Array.isArray(v.accepted) ? v.accepted : []}; prefs.accepted.forEach(id => accepted.add(id)); } } catch {} }
   async function savePrefs(){ if (bridge.savePrefs) await bridge.savePrefs(prefs); else localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }
-  const visible = d => (data?.events||[]).filter(x=>x.date===d && !hidden.has(x.sourceId) && !isHiddenEv(x.id));
+  const visible = d => [...(data?.events||[]).filter(x=>x.date===d && !hidden.has(x.sourceId) && !isHiddenEv(x.id)), ...acceptedOn(d)];
+  const morph = new Set();
+  // A suggestion you accepted is an event now: a white card in its calendar's color, until the calendar's own copy arrives.
+  function acceptedOn(d){
+    const out = [];
+    for (const id of accepted) {
+      const n = findNote(id), sg = n && suggestionFor(n); if (!sg || sg.date !== d) continue;
+      if ((data?.events||[]).some(x => x.date === d && x.start === sg.start && String(x.title).trim() === String(sg.title).trim())) continue;
+      const c = (data?.calendars||[]).find(k => k.accountId === sg.accountId && (k.calendarId === sg.calendarId || (sg.calendarId === 'primary' && k.kind === 'primary'))) || writableCal();
+      if (c.id && hidden.has(c.id)) continue;
+      out.push({id: 'acc-' + id, noteId: id, title: sg.title, date: d, start: sg.start, end: sg.end, sourceId: c.id || '', accepted: true, location: n.address || ''});
+    }
+    return out;
+  }
   let services = bridge.services || null, connecting = '', setupDismissed = false;
   const CAL = [['gcal','Google Calendar','Each Google account you add'],['microsoft.account','Outlook','Outlook calendar and mail together'],['apple-calendar.access','Apple Calendar','iCloud and anything else on this Mac']];
   const MAIL = [['gmail','Gmail','Context for meetings, from the same Google accounts'],['apple-mail.access','Apple Mail','Every account in the Mail app on this Mac']];
@@ -289,6 +311,9 @@ export function mountDaybook(root, bridge = {}) {
   const OB_READY = ['Reading your calendars', 'Checking each account', 'Looking for related mail', 'Preparing your notes'];
   let ob = null, obTimer = 0, obTickTimer = 0, demoData = null, booted = false;
   const PREVIEW_SERVICES = () => [...CAL, ...MAIL].map(([id]) => ({id, available: true, connected: false, accounts: []}));
+  const SETUP_STEPS = ['calendars', 'mail', 'you', 'look'];
+  const setupLeft = () => SETUP_STEPS.filter(k => prefs.setup?.[k] !== 'done');
+  function resumeSetup(){ beginOnboarding(); ob.step = 'calendars'; ob.resume = true; render(); }
   function beginOnboarding(){ ob = {step: 'welcome', shown: '', typed: false, picks: new Set(interests.topics || []), book: '', readyAt: 0}; menu = false; stacks.left.length = 0; stacks.right.length = 0; }
   function obRow([id, name, hint], k){
     const st = svc(id), on = !!st?.connected, busyNow = connecting === id;
@@ -307,7 +332,7 @@ export function mountDaybook(root, bridge = {}) {
     else if (st === 'mail') body = head('Step 2 of 4', 'Add email, for context.', 'Optional. Your agent reads related mail to prepare your meetings. It never sends anything.') + `<div class="db-ob-rows">${MAIL.map(obRow).join('')}</div><div class="db-ob-cta-row" data-beat="4">${next('Continue')}<button class="db-ob-link" data-action="ob-skip">Skip</button>${back}</div>`;
     else if (st === 'you') body = head('Step 3 of 4', 'What fills your free time?', 'Pick a few. When your calendar has room, Today suggests something quiet that fits.') + `<div class="db-ob-chips" data-beat="3">${OB_TOPICS.map(t => `<button class="db-ob-chip" data-action="ob-chip:${e(t)}" aria-pressed="${ob.picks.has(t)}">${e(t)}</button>`).join('')}</div><label class="db-ob-field" data-beat="3" style="--d:1"><span>A book you’re reading</span><input name="ob-book" value="${e(ob.book)}" placeholder="Optional" autocomplete="off" maxlength="160"></label><div class="db-ob-cta-row" data-beat="4">${next('Continue')}<button class="db-ob-link" data-action="ob-skip">Skip</button>${back}</div>`;
     else if (st === 'look') body = head('Step 4 of 4', 'Pick a look.', 'Change it any time with the moon at the top of Today.') + `<div class="db-ob-looks">${[['auto', 'Match Bonsai'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l], k) => `<button class="db-ob-look" data-action="ob-look:${v}" aria-pressed="${(prefs.theme || 'auto') === v}" data-beat="3" style="--d:${k}"><span class="db-ob-mini ${v}"><i></i><i></i><i></i><i></i></span><strong>${l}</strong></button>`).join('')}</div><div class="db-ob-cta-row" data-beat="4">${next('Continue')}${back}</div>`;
-    else body = head('All set', cal ? 'Your first look is on its way.' : 'You’re in.', cal ? 'I’m reading your calendars and preparing your notes. The first time takes a minute or two, and you can open Today while it works.' : 'Connect a calendar any time from the menu at the top of Today.') + (cal ? `<ul class="db-ob-steps" data-beat="3">${OB_READY.map(t => `<li><i aria-hidden="true">${ic('check')}</i>${t}</li>`).join('')}</ul>` : '') + `<div class="db-ob-cta-row" data-beat="4">${next('Open Today', false, 'ob-finish')}</div>`;
+    else body = head('All set', data && cal ? 'You’re all set.' : cal ? 'Your first look is on its way.' : 'You’re in.', data && cal ? `Today is ready with your calendars.${setupLeft().length ? ' You can finish the rest any time from Today.' : ''}` : cal ? 'I’m reading your calendars and preparing your notes. The first time takes a minute or two, and you can open Today while it works.' : 'Connect a calendar any time from the card in Today.') + (cal ? `<ul class="db-ob-steps" data-beat="3">${OB_READY.map(t => `<li><i aria-hidden="true">${ic('check')}</i>${t}</li>`).join('')}</ul>` : '') + `<div class="db-ob-cta-row" data-beat="4">${next('Open Today', false, 'ob-finish')}</div>`;
     const progress = st !== 'welcome' && st !== 'ready' ? `<div class="db-ob-progress" aria-label="Step ${idx} of 4">${[1, 2, 3, 4].map(n => `<i class="${n <= idx ? 'on' : ''}"></i>`).join('')}</div>` : '<span></span>';
     return `<section class="db-ob ${still ? 'still' : ''} ${ob.typed || st !== 'welcome' ? 'lifted' : ''}" data-step="${st}" aria-label="Welcome to Today"><div class="db-ob-top"><span class="db-ob-mark small">${st === 'welcome' ? '' : MARK}</span>${progress}<span></span></div><div class="db-ob-stage"><div class="db-ob-col">${body}</div></div></section>`;
   }
@@ -336,6 +361,7 @@ export function mountDaybook(root, bridge = {}) {
   function obNext(skip){
     if (!ob) return;
     const st = ob.step;
+    if (SETUP_STEPS.includes(st) && !(st === 'calendars' && !skip && !anyCalendar())) { prefs.setup = {...(prefs.setup || {}), [st]: skip ? 'skipped' : 'done'}; savePrefs().catch(() => {}); }
     if (st === 'calendars' && !skip && !anyCalendar()) return;
     if (st === 'calendars' && anyCalendar() && !data && !busy && bridge.load) refresh();
     if (st === 'you' && !skip) {
@@ -387,7 +413,7 @@ export function mountDaybook(root, bridge = {}) {
   async function startOver(){
     try { if (bridge.resetApp) await bridge.resetApp(); } catch (err) { showToast(err.message || 'The app could not be cleared.'); return; }
     if (!bridge.resetApp) { try { Object.keys(localStorage).filter(k => k.startsWith('daybook-')).forEach(k => localStorage.removeItem(k)); } catch {} }
-    prefs = {dismissed: [], hiddenEvents: [], theme: 'auto', onboarded: false, owner: person?.id || ''};
+    prefs = {dismissed: [], hiddenEvents: [], theme: 'auto', onboarded: false, owner: person?.id || '', setup: {}, accepted: []};
     interests = {reading: [], topics: [], near: ''}; docs = {}; plans = []; accepted.clear(); hidden.clear(); ideaCache = []; ideaKey = '';
     if (!bridge.load) { demoData = demoData || data; services = PREVIEW_SERVICES(); }
     data = null; lastError = ''; setupDismissed = false;
@@ -407,7 +433,7 @@ export function mountDaybook(root, bridge = {}) {
     render();
   }
   const allNotes = () => [...(data?.notes||[]), ...localIdeas(), ...planList()].filter(n => !isDismissed(n.id));
-  const notesOn = d => allNotes().filter(x=>x.date===d && !(x.sourceId && hidden.has(x.sourceId)));
+  const notesOn = d => allNotes().filter(x=>x.date===d && !accepted.has(x.id) && !(x.sourceId && hidden.has(x.sourceId)));
   const INTEREST_KEY = 'daybook-interests'; let interests = {reading:[], topics:[], near:''}, ideaCache = [], ideaKey = '';
   async function loadInterests(){ try { const v = bridge.loadInterests ? await bridge.loadInterests() : JSON.parse(localStorage.getItem(INTEREST_KEY) || 'null'); if (v) interests = {reading:v.reading||[], topics:v.topics||[], near:v.near||''}; } catch {} ideaKey = ''; }
   async function saveInterests(){ ideaKey = ''; if (bridge.saveInterests) await bridge.saveInterests(interests); else localStorage.setItem(INTEREST_KEY, JSON.stringify(interests)); }
@@ -431,7 +457,7 @@ export function mountDaybook(root, bridge = {}) {
   const rangeEnd = () => data?.coverage?.rangeEnd || add(today,30);
   const rel = d => d===today ? 'Today' : d===tomorrow ? 'Tomorrow' : label(d,{weekday:'long'});
   const cls = x => [imported(x)?'imported':'', hold(x)?'hold':'', x.context?.length?'ctx':''].join(' ');
-  const showToast = (text, undo) => { shell.querySelector('.db-toast')?.remove(); undoFn = undo || null; const t = document.createElement('div'); t.className='db-toast'; t.setAttribute('role','status'); t.textContent=text; if (undo) { const b = document.createElement('button'); b.className = 'db-undo'; b.dataset.action = 'undo'; b.textContent = 'Undo'; t.append(b); } shell.append(t); clearTimeout(toastTimer); toastTimer=setTimeout(()=>{ t.remove(); undoFn = null; }, undo ? 6500 : 4200); };
+  const showToast = (text, undo) => { if (/is not authorized for plugin|has not granted it/i.test(String(text))) text = 'Today needs permission to run your agent. In App Store, open Installed, then Today, and allow it under Permissions.'; shell.querySelector('.db-toast')?.remove(); undoFn = undo || null; const t = document.createElement('div'); t.className='db-toast'; t.setAttribute('role','status'); t.textContent=text; if (undo) { const b = document.createElement('button'); b.className = 'db-undo'; b.dataset.action = 'undo'; b.textContent = 'Undo'; t.append(b); } shell.append(t); clearTimeout(toastTimer); toastTimer=setTimeout(()=>{ t.remove(); undoFn = null; }, undo ? 6500 : 4200); };
   function dayItems(d){
     const ev = visible(d), nn = notesOn(d);
     const markers = ev.filter(marker), allDay = ev.filter(x=>!x.start && !marker(x));
@@ -517,7 +543,7 @@ export function mountDaybook(root, bridge = {}) {
     }, 45000);
   }
   function writableCal(){ return (data?.calendars||[]).find(k=>k.writable && k.kind==='primary') || {}; }
-  function blockFor(title, date, start, len){ const c = writableCal(); return {title, date, start:hm(start), end:hm(start+len), accountId:c.accountId||'', calendarId:c.calendarId||'primary', provider:c.provider||'gcal'}; }
+  function blockFor(title, date, start, len, pref){ const c = (pref && pref.writable) ? pref : writableCal(); return {title, date, start:hm(start), end:hm(start+len), accountId:c.accountId||'', calendarId:c.calendarId||'primary', provider:c.provider||'gcal'}; }
   function gapsIn(evs, from, to, min){
     const out = []; let cur = from;
     for (const v of evs.slice().sort((p,q)=>p.s-q.s)) { if (v.e <= cur) continue; if (v.s - cur >= min) out.push([cur, Math.min(v.s, to)]); cur = Math.max(cur, v.e); if (cur >= to) break; }
@@ -529,28 +555,46 @@ export function mountDaybook(root, bridge = {}) {
     const out = [];
     for (const p of plans) {
       out.push({id:`reply-${p.id}`, planId:p.id, type:'reply', working: p.status==='working'||p.status==='researching', date:p.day||today, time:p.at||'12:00', title:p.reply||p.title, body:p.replyBody||''});
-      if (p.kind === 'move') out.push(...(p.items||[]));
+      if (p.kind !== 'research') out.push(...(p.items||[]));
       else if (p.range) out.push({id:`plan-${p.id}`, planId:p.id, summary:true, working: p.status==='researching', type:'idea', ideaKind:'place', date:p.range.date, time:p.range.start, title: p.status==='ready' ? `${WORDS[(p.items||[]).length]||(p.items||[]).length} ${p.noun} to choose from` : p.status==='failed' ? 'The research did not finish' : `Looking into ${p.noun}`, body: p.status==='ready' ? `${p.anchorLabel?'Near '+p.anchorLabel+'. ':''}Pick one, or keep the time open.` : p.status==='failed' ? (p.error||'Try again later.') : 'A deeper look is underway. Options will appear here.'});
     }
     return out;
   }
-  async function createMovePlan(text){
-    const both = /stretch/i.test(text) && /work ?out|exercis|gym|run|lift|yoga|swim|pilates/i.test(text), stretchOnly = /stretch/i.test(text) && !both;
-    const windows = [[420,570,'morning'],[720,840,'midday'],[1050,1230,'evening']], cands = [];
-    for (let k = 0; k < 7; k++) {
-      const d = add(today, k), from = k === 0 ? Math.ceil((mins(clock(new Date())) + 30)/15)*15 : 0;
-      for (const [a,b,label] of windows) { const len = stretchOnly ? 20 : 45, g = gapsIn(busyOn(d, 15), Math.max(a, from), b, len)[0]; if (g) { cands.push({d, start:Math.ceil(g[0]/15)*15, label}); break; } }
+  const durLabel = n => n >= 60 ? `${+(n / 60).toFixed(1)} hr` : `${n} min`;
+  const countWord = n => (WORDS[n] || String(n)).toLowerCase();
+  const dayWord = d => d === today ? 'today' : d === tomorrow ? 'tomorrow' : label(d, {weekday: 'long'});
+  async function createTimePlan(text, cfg){
+    const days = (cfg.days && cfg.days.length ? cfg.days : Array.from({length: 7}, (_, k) => add(today, k))).filter(d => d >= today && d <= rangeEnd());
+    const few = days.length <= 2;
+    let windows = cfg.windows || [[420, 570, 'morning'], [720, 840, 'midday'], [1050, 1230, 'evening']];
+    if (few && windows.length === 1 && windows[0][1] - windows[0][0] > 240) { const [a0, b0, l0] = windows[0], st0 = (b0 - a0) / 3; windows = [0, 1, 2].map(k => [Math.round((a0 + k * st0) / 15) * 15, Math.round((a0 + (k + 1) * st0) / 15) * 15, l0]); }
+    const cands = [];
+    for (const d of days) {
+      const from = d === today ? Math.ceil((mins(clock(new Date())) + 30) / 15) * 15 : 0;
+      for (const [a, b, lab] of windows) {
+        const len = cfg.len(cands.length);
+        for (const g of gapsIn(busyOn(d, 15), Math.max(a, from), b, len)) {
+          const st = Math.ceil(g[0] / 15) * 15; if (st + len > g[1] || cands.some(c => c.d === d && Math.abs(c.start - st) < len + 60)) continue;
+          cands.push({d, start: st, label: lab});
+          if (!few || cands.filter(c => c.d === d).length >= 4) break;
+        }
+        if (!few && cands.some(c => c.d === d)) break;
+      }
     }
-    const pick = cands.length <= 4 ? cands : [0,1,2,3].map(i => cands[Math.floor(i * cands.length / 4)]);
+    if (!cands.length && cfg.fallback && cfg.fallback.length) return createTimePlan(text, {...cfg, len: () => cfg.fallback[0], fallback: cfg.fallback.slice(1), shorter: true, title: cfg.title.replace(/, [\d.]+ (hr|min)$/, `, ${durLabel(cfg.fallback[0])}`)});
+    const want = Math.max(1, Math.min(cfg.count || 4, 6));
+    const pick = cands.length <= want ? cands : Array.from({length: want}, (_, k) => cands[Math.floor(k * cands.length / want)]);
     const pid = 'p' + Date.now().toString(36);
-    const items = pick.map((c, i) => { const stretch = stretchOnly || (both && i % 2 === 1), len = stretch ? 20 : 45, title = stretch ? 'Stretch · 20 min' : 'Workout · 45 min'; return {id:`${pid}-${i}`, planId:pid, type:'idea', ideaKind:'do', date:c.d, time:hm(c.start), title, body:`${c.label === 'morning' ? 'Before the day starts' : c.label === 'midday' ? 'A midday break' : 'After the day winds down'}. Nothing else is on your calendars then.`, suggestion:blockFor(stretch ? 'Stretch' : 'Workout', c.d, c.start, len)}; });
-    const plan = {id:pid, kind:'move', text, day:today, at:clock(new Date()), status:'working', title:'Time to move this week', reply:'Looking across your week.', replyBody:'Checking every calendar for open time.', items:[]};
+    const items = pick.map((c, k) => { const len = cfg.len(k), name = cfg.name(k); return {id: `${pid}-${k}`, planId: pid, type: 'idea', ideaKind: 'do', date: c.d, time: hm(c.start), title: `${name} · ${durLabel(len)}`, body: cfg.body ? cfg.body(c, k) : `${c.label === 'morning' ? 'Before the day starts' : c.label === 'midday' ? 'A midday break' : c.label === 'evening' ? 'After the day winds down' : 'Open'}. Nothing else is on your calendars then.`, suggestion: blockFor(name, c.d, c.start, len, cfg.calendar)}; });
+    const plan = {id: pid, kind: cfg.kind || 'move', text, day: today, at: clock(new Date()), status: 'working', title: cfg.title, reply: cfg.working || 'Looking across your calendars.', replyBody: 'Checking every calendar for open time.', items: []};
     plans.push(plan);
-    setWorking('Looking across your week…');
+    setWorking(cfg.working ? cfg.working + '…' : 'Looking across your week…');
     agentAt(shell.querySelector('form.db-context'), 0.1, 0.5, true);
-    if (view !== '7' || page['7'] !== before('7')) { view = '7'; page['7'] = before('7'); }
+    const span = days.length ? diff(days[0], days[days.length - 1]) : 0;
+    if (days.length && span <= 2 && !(days.length === 1 && days[0] === today)) { if (view !== '3' || !visibleCol(days[0])) setView('3', days[0]); }
+    else if (span > 2 && (view !== '7' || page['7'] !== before('7'))) { view = '7'; page['7'] = before('7'); }
     if (stacks.right.length) stacks.right = [];
-    fresh.add(`reply-${pid}`); render({cascade:true}); fresh.delete(`reply-${pid}`);
+    fresh.add(`reply-${pid}`); render({cascade: true}); fresh.delete(`reply-${pid}`);
     await sleep(800);
     for (const it of items) {
       if (it.date === today) {
@@ -568,21 +612,157 @@ export function mountDaybook(root, bridge = {}) {
       await sleep(240);
     }
     plan.status = 'ready';
-    plan.reply = items.length ? `Found ${WORDS[items.length].toLowerCase()} times to move this week.` : 'This week is full.';
-    plan.replyBody = items.length ? `${items.map(it=>label(it.date,{weekday:'short'})).join(', ')}. Accept the ones that feel right.` : 'No open time fit. I will keep looking as the week changes.';
+    const nounFor = n => n === 1 ? cfg.noun.replace(/\btimes\b/, 'time') : cfg.noun;
+    plan.reply = items.length ? `Found ${countWord(items.length)} ${nounFor(items.length)}${cfg.shorter ? `, ${durLabel(cfg.len(0))} each` : ''}.` : (cfg.empty || 'Nothing open fits.');
+    plan.replyBody = items.length ? `${items.map(it => `${label(it.date, {weekday: 'short'})} ${time(it.time)}`).join(', ')}. ${cfg.after || 'Accept the ones that feel right.'}` : 'No open time fit on every calendar. Try another day.';
     await savePlans();
     await sleep(300); agentOff(); setWorking('');
-    fresh.add(`reply-${pid}`); render({only:'left'}); fresh.delete(`reply-${pid}`);
-    showToast(items.length ? `Found ${WORDS[items.length].toLowerCase()} times. Accept the ones that fit.` : 'No open time fit this week.');
+    fresh.add(`reply-${pid}`); render({only: 'left'}); fresh.delete(`reply-${pid}`);
+    showToast(items.length ? `Found ${countWord(items.length)} ${nounFor(items.length)}${cfg.shorter ? ` (${durLabel(cfg.len(0))}, the most that fits)` : ''}. ${cfg.after || 'Accept the ones that fit.'}` : (cfg.empty || 'Nothing open fits.'));
   }
+  function moveCfg(text, w){
+    const both = /stretch/i.test(text) && /work ?out|exercis|gym|run|lift|yoga|swim|pilates/i.test(text), stretchOnly = /stretch/i.test(text) && !both;
+    const act = /\b(run|running|jog\w*)\b/i.test(text) ? 'Run' : /yoga/i.test(text) ? 'Yoga' : /swim/i.test(text) ? 'Swim' : /pilates/i.test(text) ? 'Pilates' : /walk/i.test(text) ? 'Walk' : 'Workout';
+    const isStretch = k => stretchOnly || (both && k % 2 === 1);
+    const where = w.days && w.days.length === 1 ? dayWord(w.days[0]) : w.days && w.days.length === 2 ? (/next weekend/i.test(text) ? 'next weekend' : 'this weekend') : /next week/i.test(text) ? 'next week' : 'this week';
+    return {kind: 'move', days: w.days, windows: w.part ? [[w.part[0], w.part[1], w.partName]] : null, count: w.count || (w.days && w.days.length === 1 ? 3 : 4), len: k => isStretch(k) ? (w.duration && stretchOnly ? w.duration : 20) : (w.duration || 45), name: k => isStretch(k) ? 'Stretch' : act, title: `Time to move ${where}`, noun: `times to move ${where}`, working: `Looking across ${where === 'this week' ? 'your week' : where}`};
+  }
+  async function createMovePlan(text){ return createTimePlan(text, moveCfg(text, parseWhen(text))); }
+
   function anchorFor(r){
     const evs = (data.events||[]).filter(x=>x.date===r.date && x.start && x.location && !imported(x)); if (!evs.length) return null;
     const mid = (mins(r.start) + mins(r.end)) / 2, c = x => (mins(x.start) + (mins(x.end) ?? mins(x.start))) / 2;
     return evs.sort((a,b)=>Math.abs(c(a)-mid)-Math.abs(c(b)-mid))[0];
   }
   const anchorKey = loc => /salon 94|e(ast)? 89th/i.test(loc||'') ? 'ues' : /starr st|bushwick|11237/i.test(loc||'') ? 'bushwick' : '';
+  const DAYN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  function parseWhen(text){
+    const t = ' ' + text.toLowerCase().replace(/[’']/g, "'") + ' ', now = date(today).getUTCDay();
+    const out = {days: null, part: null, partName: '', at: null, duration: null, count: null, anchor: null};
+    if (/\b(today|tonight|this (morning|afternoon|evening))\b/.test(t)) out.days = [today];
+    else if (/\btomorrow\b/.test(t)) out.days = [tomorrow];
+    else if (/\bweekend\b/.test(t)) { let sat = add(today, (6 - now + 7) % 7); if (/\bnext weekend\b/.test(t)) sat = add(sat, 7); out.days = (now === 0 && !/\bnext\b/.test(t)) ? [today] : [sat, add(sat, 1)]; }
+    else if (/\bnext week\b/.test(t)) { const mon = add(today, ((1 - now + 7) % 7) || 7); out.days = Array.from({length: 7}, (_, k) => add(mon, k)); }
+    else if (/\bthis week\b/.test(t)) out.days = Array.from({length: 7}, (_, k) => add(today, k));
+    else {
+      const alias = {tuesday: '|tues', wednesday: '|weds', thursday: '|thurs?'};
+      const hits = DAYN.map((n, i) => new RegExp(`\\b(${n}|${n.slice(0, 3)}${alias[n] || ''})s?\\b`).test(t) ? i : -1).filter(i => i >= 0);
+      if (hits.length) out.days = [...new Set(hits.map(i => add(today, ((i - now) + 7) % 7 || (/\bnext\b/.test(t) ? 7 : 0))))].sort();
+    }
+    const parts = [[/\b(early morning|before work|first thing)\b/, [420, 540], 'morning'], [/\b(morning|breakfast)\b/, [450, 720], 'morning'], [/\bbrunch\b/, [600, 840], 'midday'], [/\b(lunch|midday|noon)\b/, [690, 870], 'midday'], [/\bafternoon\b/, [720, 1050], 'afternoon'], [/\bafter work\b/, [1050, 1260], 'evening'], [/\bdrinks?\b/, [1080, 1380], 'evening'], [/\b(evening|tonight|dinner|night)\b/, [1020, 1320], 'evening']];
+    for (const [re, pr, n] of parts) if (re.test(t)) { out.part = pr; out.partName = n; break; }
+    const tm = t.match(/\b(?:at|@|around|by)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?(?=\W)/) || t.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/);
+    if (tm) { let h = Number(tm[1]) % 12; const ap = (tm[3] || '').replace(/\./g, '') || (h >= 1 && h <= 7 ? 'pm' : 'am'); if (ap === 'pm') h += 12; const v = h * 60 + Number(tm[2] || 0); if (v >= 300 && v <= 1410) out.at = v; }
+    const du = t.match(/\b(\d+(?:\.\d+)?|an?|one|two|three|four|half an?)\s*(hours?|hrs?|h|minutes?|mins?)\b/);
+    if (du) { const n = {a: 1, an: 1, one: 1, two: 2, three: 3, four: 4}[du[1]] ?? (/^half/.test(du[1]) ? 0.5 : Number(du[1])); out.duration = Math.round((/^h/.test(du[2]) ? n * 60 : n) / 15) * 15 || null; }
+    const cn = t.match(/\b(\d|one|two|three|four|five)\s*(times|x|sessions|days)\b/);
+    if (cn) out.count = {one: 1, two: 2, three: 3, four: 4, five: 5}[cn[1]] || Number(cn[1]);
+    const an = t.match(/\b(after|before|around)\s+(?:my |the )?([a-z0-9][a-z0-9 &'.-]*?)(?=\s+(?:on|this|next|tomorrow|today|tonight)\b|[?.!,]|\s*$)/);
+    if (an && !/^work\b/.test(an[2])) {
+      const ev = matchEvent(an[2]) || (out.at != null ? (data?.events || []).find(x => (out.days || [today]).includes(x.date) && mins(x.start) === out.at) : null);
+      if (ev && ev.start) { const s0 = mins(ev.start), e0 = mins(ev.end) ?? s0 + 60; out.anchor = {ev, rel: an[1]}; out.days = [ev.date]; out.part = an[1] === 'after' ? [e0, Math.min(1410, e0 + 180)] : an[1] === 'before' ? [Math.max(360, s0 - 180), s0] : [Math.max(360, s0 - 120), Math.min(1410, e0 + 120)]; out.partName = ''; }
+    }
+    return out;
+  }
+  const EV_STOP = new Set('the and for with from that this next our your call calls meeting meetings event events invite sync time times today tonight tomorrow week weekend morning afternoon evening night monday tuesday wednesday thursday friday saturday sunday tues weds thurs move reschedule push shift cancel decline delete remove skip prep prepare brief ready get please can you could want need would like about let know'.split(' '));
+  function matchEvent(text){
+    const words = String(text).toLowerCase().replace(/[’']s\b/g, '').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(w => w.length > 2 && !EV_STOP.has(w));
+    if (!words.length) return null;
+    let best = null, score = 0;
+    for (const x of (data?.events || [])) {
+      if (x.date < today || x.date > add(today, 21) || cal(x.sourceId).kind === 'holidays' || marker(x)) continue;
+      const title = String(x.title || '').toLowerCase().replace(/[’']s\b/g, '');
+      const sc = words.reduce((n, w) => n + (new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '')}`).test(title) ? 1 : 0), 0);
+      if (sc > score || (sc && sc === score && x.date < best.date)) { best = x; score = sc; }
+    }
+    return score ? best : null;
+  }
+  function rangeFor(text, w){
+    const t = text.toLowerCase(), meal = /\bbreakfast\b/.test(t) ? [480, 630] : /\bbrunch\b/.test(t) ? [600, 840] : /\blunch\b/.test(t) ? [690, 870] : /\b(dinner|supper)\b/.test(t) ? [1050, 1320] : /\b(drinks?|bar)\b/.test(t) ? [1080, 1380] : null;
+    const days = w.days || [today], part = w.part || meal || [600, 1260];
+    for (const d of days) {
+      if (d < today || d > rangeEnd()) continue;
+      const a = d === today ? Math.max(part[0], Math.ceil((mins(clock(new Date())) + 15) / 15) * 15) : part[0];
+      const g = gapsIn(busyOn(d), a, part[1], 45).sort((p, q) => (q[1] - q[0]) - (p[1] - p[0]))[0];
+      if (g) return {date: d, start: hm(Math.ceil(g[0] / 15) * 15), end: hm(g[1])};
+    }
+    return null;
+  }
+  function blockTitle(text){
+    let t = ' ' + text.toLowerCase().replace(/[’']/g, "'") + ' ';
+    t = t.replace(/\b(please|can you|could you|i want to|i'd like to|i need to|help me|let's)\b/g, ' ')
+      .replace(/\b(block( off| out)?|hold|reserve|find|make|set aside|carve out|schedule|add|put|book|plan)\b/g, ' ')
+      .replace(/\b(\d+(\.\d+)?|an?|one|two|three|four|half an?)\s*(hours?|hrs?|h|minutes?|mins?)\b/g, ' ')
+      .replace(/\b\d{1,2}(:\d{2})?\s*(am|pm)?\b/g, ' ')
+      .replace(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tue|tues|wed|weds|thu|thur|thurs|fri|sat)s?\b/g, ' ')
+      .replace(/\b(today|tonight|tomorrow|this|next|weekend|week|morning|afternoon|evening|night|on|at|from|to|until|for|some|time|in|my|the|a|an|me|every|each)\b/g, ' ')
+      .replace(/[?.!,]/g, ' ').replace(/\s+/g, ' ').trim();
+    return t ? cap(t) : (/focus/i.test(text) ? 'Focus' : 'Hold');
+  }
+  const BLOCK_LEAD = /^(please\s+)?(block|hold|reserve|schedule|add|put|book|set aside|carve out|find time|make time|plan time)\b/i;
+  const BLOCK_CUE = /\b(focus|deep work|heads? ?down|time (to|for)|block of)\b/i;
+  const CHANGE = /\b(move|reschedule|push|shift|cancel|decline|delete|remove|skip)\b/i;
+  const PREP = /\b(prep|prepare|brief me|get ready for|briefing)\b/i;
+  const ASK = /\?\s*$|^(what|when|how|am i|do i|is there|are there|show me|anything)\b|\b(am i (free|busy)|free time|how busy)\b/i;
+  const PLACE = /\b(somewhere|places? to|(some|any)thing to do|things? to do|what to do|go out|nearby|explore)\b/i;
+  const plain = text => { let t = String(text).trim(), prev; do { prev = t; t = t.replace(/^(hey|hi|ok|okay|so|please|can you|could you|would you|will you|i want to|i'd like to|i’d like to|i need to|help me|let's|let’s)\b[\s,]*/i, ''); } while (t !== prev); return t; };
+  async function routeRequest(raw){
+    const value = plain(raw) || raw, w = parseWhen(value), ev = matchEvent(value);
+    contextDraft = ''; contextHint = '';
+    if (PREP.test(value) && ev) return prepEvent(value, ev);
+    if (CHANGE.test(value) && ev && !/\bmove more\b/i.test(value)) return changeEvent(value, ev, w);
+    if (BLOCK_LEAD.test(value) && !MOVE.test(value)) return blockRequest(value, w);
+    if (MOVE.test(value)) { bridge.context?.(value).catch(() => {}); return createTimePlan(value, moveCfg(value, w)); }
+    if (MUSEUM.test(value) || FOOD.test(value) || PLACE.test(value)) { bridge.context?.(value).catch(() => {}); const r = rangeFor(value, w); if (r) return createResearch(value, r); render(); showToast(`No open time ${w.days ? dayWord(w.days[0]) : 'today'} for that. Try another day.`); return; }
+    if (ASK.test(value)) return answerDay(value, w);
+    if (BLOCK_CUE.test(value) || w.duration || (w.at != null && w.days)) return blockRequest(value, w);
+    return keepNote(value);
+  }
+  async function keepNote(value){
+    if (bridge.context) await bridge.context(value); else data.notes.push({id: 'local-' + Date.now(), date: today, time: clock(new Date()), type: 'context', title: 'For later', body: value});
+    render(); showToast(bridge.context ? 'Kept for your agent.' : 'Kept in this preview only.');
+  }
+  function openNewEvent(d, a, b, name){
+    if (stacks.right.length) stacks.right = [];
+    openDoc('right', {kind: 'newevent', id: `${d}:${hm(a)}-${hm(Math.min(b, 1440))}!`});
+    const fill = () => { const ti = shell.querySelector('.db-right .db-newev')?.closest('.db-docpage')?.querySelector('.db-doc-title') || shell.querySelector('.db-right .db-doc-title'); if (ti && !ti.textContent.trim()) { ti.textContent = name; ti.dispatchEvent(new Event('input', {bubbles: true})); } };
+    fill(); setTimeout(fill, 60);
+    showToast(`${name}, ${dayWord(d)} at ${time(hm(a))}. Check it, then Add to calendar.`);
+  }
+  async function blockRequest(value, w){
+    const name = blockTitle(value), len = w.duration || (/deep work|heads? ?down/i.test(value) ? 120 : /focus/i.test(value) ? 90 : /\bread/i.test(value) ? 45 : 60);
+    if (w.at != null) { const d = (w.days && w.days[0]) || (w.at > mins(clock(new Date())) ? today : tomorrow); return openNewEvent(d, w.at, w.at + len, name); }
+    const one = w.days && w.days.length === 1;
+    return createTimePlan(value, {kind: 'block', days: w.days, windows: w.part ? [[w.part[0], w.part[1], w.partName]] : [[540, 1080, 'day']], count: one ? 3 : 4, len: () => len, fallback: w.duration ? null : [60, 45].filter(n => n < len), name: () => name, title: `${name}, ${durLabel(len)}`, noun: /^(read|write|call|run|walk|think|plan|study|practice|draw|paint|cook|journal|meditate)$/i.test(name) ? `open times to ${name.toLowerCase()}` : `open times for ${name.toLowerCase()}`, working: `Finding ${durLabel(len)} for ${name.toLowerCase()}`, body: () => `${durLabel(len)} open on every calendar. Accept adds a private block.`});
+  }
+  function answerDay(value, w){
+    const d = (w.days && w.days[0]) || (/\b(today|tonight)\b/i.test(value) ? today : tomorrow);
+    if (stacks.right.length) stacks.right = [];
+    openDoc('right', {kind: 'day', id: d});
+    const n = visible(d).filter(x => x.start && !marker(x)).length, g = largestGap(d);
+    showToast(`${cap(dayWord(d))}: ${n === 0 ? 'nothing timed' : n === 1 ? 'one event' : `${n} events`}${g ? `. Most open ${time(hm(g[0]))} to ${time(hm(g[1]))}` : '. No long open stretch'}.`);
+  }
+  function prepEvent(value, ev){
+    bridge.context?.(`Prepare a brief for "${ev.title}" on ${ev.date}. Request: ${value}`).catch(() => {});
+    const side = ev.date === today ? 'left' : 'right';
+    if (stacks[side].length) stacks[side] = [];
+    openDoc(side, {kind: 'event', id: ev.id});
+    showToast(bridge.context ? `Opened ${ev.title}. Your agent adds a brief on its next refresh.` : `Opened ${ev.title}. Installed, your agent adds a brief on its next refresh.`);
+  }
+  async function changeEvent(value, ev, w){
+    const cancel = /\b(cancel|decline|delete|remove|skip)\b/i.test(value), own = deletable(ev), side = ev.date === today ? 'left' : 'right';
+    if (cancel) {
+      if (stacks[side].length) stacks[side] = [];
+      openDoc(side, {kind: 'event', id: ev.id});
+      showToast(own ? `Opened ${ev.title}. Delete is at the bottom when you are sure.` : `${ev.title} came from someone else's invite, so Today leaves it alone. Decline it in your calendar, or hide it here.`);
+      return;
+    }
+    const len = Math.max(15, ((mins(ev.end) ?? (mins(ev.start) + 60)) - mins(ev.start)) || 60);
+    const days = w.days && !(w.days.length === 1 && w.days[0] === ev.date) ? w.days : [1, 2, 3].map(k => add(ev.date, k));
+    return createTimePlan(value, {kind: 'move-event', calendar: cal(ev.sourceId), days, windows: w.part ? [[w.part[0], w.part[1], w.partName]] : [[540, 1080, 'day']], count: 4, len: () => len, name: () => `Hold · ${ev.title}`, title: `New times for ${ev.title}`, noun: 'open times that fit', working: `Finding times for ${ev.title}`, after: own ? 'Accept holds one; then move the event in your calendar.' : 'Accept holds one privately so you can propose it. Today does not move meetings with other people.', body: () => own ? 'Open on every calendar.' : 'Open on every calendar. Today does not move meetings with other people.'});
+  }
   async function createResearch(text, r){
-    const category = MUSEUM.test(text) ? 'museum' : FOOD.test(text) ? 'restaurant' : 'place', noun = {museum:'museums', restaurant:'places to eat', place:'places'}[category];
+    const category = MUSEUM.test(text) ? 'museum' : FOOD.test(text) ? 'restaurant' : 'place', noun = category === 'restaurant' && /\b(drinks?|bar)\b/i.test(text) ? 'places for a drink' : category === 'restaurant' && /\b(coffee|caf[eé])\b/i.test(text) ? 'coffee spots' : {museum:'museums', restaurant:'places to eat', place:'places'}[category];
     const anchor = anchorFor(r), anchorLabel = anchor ? anchor.location.split(',')[0] : (interests.near || '');
     const pid = 'r' + Date.now().toString(36), when = `${shortDate(r.date)}, ${time(r.start)} to ${time(r.end)}`;
     const plan = {id:pid, kind:'research', text, day:today, at:clock(new Date()), range:r, category, noun, anchorLabel, anchor: anchor ? {title:anchor.title, location:anchor.location} : null, status:'researching', title:`${cap(noun)}${anchorLabel?' near '+anchorLabel:''}`, reply:'Looking into this.', replyBody:`${cap(noun)}${anchorLabel?' near '+anchorLabel:''} for ${when}. I will share options after a deeper look.`, items:[]};
@@ -670,7 +850,7 @@ export function mountDaybook(root, bridge = {}) {
       render(); showToast(bridge.createEvent ? `On your calendar · ${shortDate(d)}, ${time(start)}` : 'Added in this preview. In the installed app it goes on your calendar.');
     } catch (err) { btn.disabled = false; btn.lastChild.textContent = 'Add to calendar'; if (note) note.textContent = err.message || 'The event was not added.'; }
   }
-  const deletable = x => !!x && (String(x.id).startsWith('local-ev-') || String(x.id).startsWith('created-') || (!x.people && !x.organizer && !imported(x) && cal(x.sourceId).kind !== 'holidays' && cal(x.sourceId).writable));
+  const deletable = x => !!x && !String(x.id).startsWith('acc-') && (String(x.id).startsWith('local-ev-') || String(x.id).startsWith('created-') || (!x.people && !x.organizer && !imported(x) && cal(x.sourceId).kind !== 'holidays' && cal(x.sourceId).writable));
   function titleOf(id){ return (findNote(id) || {}).title || ''; }
   async function dismiss(id){
     const n = findNote(id), plan = plans.find(p => `plan-${p.id}` === id || `reply-${p.id}` === id);
@@ -722,19 +902,19 @@ export function mountDaybook(root, bridge = {}) {
     events.sort((a,b)=>a.s-b.s); let group=[], end=-1; const placed=[];
     const flush=()=>{const cols=[];group.forEach(v=>{let i=cols.findIndex(c=>c<=v.s);if(i<0){i=cols.length;cols.push(0)}cols[i]=v.e;v.lane=i});group.forEach(v=>v.lanes=cols.length);placed.push(...group);group=[]};
     events.forEach(v=>{if(v.s>=end&&group.length)flush();group.push(v);end=Math.max(end,v.e)}); if(group.length)flush();
-    const blocks = placed.map(v=>{const short=(v.e-v.s)<=60; const w=100/v.lanes; return `<button class="db-te ${short?'short':''} ${v.e<nowMin?'past':''} ${cls(v.x)}" data-action="event:${e(v.x.id)}" style="--c:${color(v.x.sourceId)};top:${pct(v.s)}%;height:${(Math.min(v.e,re)-v.s)/total*100}%;left:calc(${w*v.lane}% + ${v.lane?4:0}px);width:calc(${w}% - ${v.lanes>1?4:0}px)">${aura(v.x.id)}<strong>${e(v.x.title)}</strong><small>${span(v.x)}</small></button>`;}).join('');
+    const blocks = placed.map(v=>{const short=(v.e-v.s)<=60; const w=100/v.lanes; return `<button class="db-te ${short?'short':''} ${v.e<nowMin?'past':''} ${cls(v.x)} ${v.x.accepted?'accepted':''} ${morph.has(v.x.id)?'db-morph':''}" data-action="${v.x.accepted?'note:'+e(v.x.noteId):'event:'+e(v.x.id)}" style="--c:${color(v.x.sourceId)};top:${pct(v.s)}%;height:${(Math.min(v.e,re)-v.s)/total*100}%;left:calc(${w*v.lane}% + ${v.lane?4:0}px);width:calc(${w}% - ${v.lanes>1?4:0}px)">${aura(v.x.id)}<strong>${e(v.x.title)}</strong><small>${span(v.x)}</small></button>`;}).join('');
     const gaps = openGaps(events, Math.max(nowMin, rs), Math.min(re, 1320));
     const ideasToday = timed.filter(t=>t.kind==='idea');
     const open = gaps.map(([a,b])=>{ const idea = ideasToday.find(t=>t.at>=a && t.at<b); return `<div class="db-open" style="top:calc(${pct(a)}% + 4px);height:calc(${(b-a)/total*100}% - 8px)"><button class="db-open-main" data-action="open:${hm(a)}-${hm(b)}"><span>Open</span>${time(hm(a))} to ${time(hm(b))} · ${dur(b-a)}</button>${idea?`<div class="db-open-idea ${fresh.has(idea.x.id)?'db-fresh':''}"><button data-action="note:${e(idea.x.id)}">${e(idea.x.title)}</button>${acceptBtn(idea.x)}</div>`:''}</div>`; }).join('');
     const rest = timed.filter(t=>t.kind!=='event' && t.kind!=='idea' && t.kind!=='reply'), mine = rest.filter(t=>String(t.x.id).startsWith('local-')).reverse();
-    const notes = [...timed.filter(t=>t.kind==='reply').slice(-1), ...mine, ...rest.filter(t=>!mine.includes(t))].slice(0,3).map(t=>`<div class="db-notewrap"><button class="db-note ${t.x.type==='reply'?'reply':''} ${t.x.working?'working':''} ${fresh.has(t.x.id)?'db-fresh':''}" data-action="${t.x.type==='reply'?'plan:'+e(t.x.planId):'note:'+e(t.x.id)}"><span class="db-eyebrow"><i style="background-position:${t.x.type==='artifact'?'38%':t.x.type==='reply'?'15%':'70%'} 50%"></i>${t.x.type==='artifact'?'Prepared':t.x.type==='rest'?'Suggestion':t.x.type==='reply'?'From your agent':'Note'}</span><strong>${e(t.x.title)}</strong><span class="db-clamp">${e(t.x.body)}</span>${t.x.artifact?`<span class="db-link">${ic('doc')}${e(t.x.label||'Open brief')}</span>`:''}${t.x.type==='reply'?`<span class="db-link">${plans.find(p=>p.id===t.x.planId)?.kind==='move'?'See the times':'See the plan'}</span>`:''}</button><button class="db-x" data-action="dismiss:${e(t.x.id)}" aria-label="Dismiss" title="Dismiss">×</button></div>`).join('');
+    const notes = [...timed.filter(t=>t.kind==='reply').slice(-1), ...mine, ...rest.filter(t=>!mine.includes(t))].slice(0, setupLeft().length ? 2 : 3).map(t=>`<div class="db-notewrap"><button class="db-note ${t.x.type==='reply'?'reply':''} ${t.x.working?'working':''} ${fresh.has(t.x.id)?'db-fresh':''}" data-action="${t.x.type==='reply'?'plan:'+e(t.x.planId):'note:'+e(t.x.id)}"><span class="db-eyebrow"><i style="background-position:${t.x.type==='artifact'?'38%':t.x.type==='reply'?'15%':'70%'} 50%"></i>${t.x.type==='artifact'?'Prepared':t.x.type==='rest'?'Suggestion':t.x.type==='reply'?'From your agent':'Note'}</span><strong>${e(t.x.title)}</strong><span class="db-clamp">${e(t.x.body)}</span>${t.x.artifact?`<span class="db-link">${ic('doc')}${e(t.x.label||'Open brief')}</span>`:''}${t.x.type==='reply'?`<span class="db-link">${(plans.find(p=>p.id===t.x.planId)?.kind||'research')!=='research'?'See the times':'See the plan'}</span>`:''}</button><button class="db-x" data-action="dismiss:${e(t.x.id)}" aria-label="Dismiss" title="Dismiss">×</button></div>`).join('');
     const upcoming = events.filter(v=>v.e>nowMin).length, biggest = gaps.slice().sort((a,b)=>(b[1]-b[0])-(a[1]-a[0]))[0];
     const allLine = [...markers.map(x=>x.title), ...allDay.map(x=>x.title)];
-    return `<section class="db-left" aria-label="Today"><header class="db-head"><p class="db-eyebrow">${label(today,{weekday:'long'})} · ${label(today,{month:'long',day:'numeric',year:'numeric'})}</p><h1 class="db-title">Today</h1><p class="db-sub"><span><b>${upcoming}</b> still ahead</span>${biggest?`<span>Open from <b>${time(hm(biggest[0]))}</b> to <b>${time(hm(biggest[1]))}</b></span>`:''}</p>${allLine.length?`<p class="db-allday">All day · ${e(allLine.join(' · '))}</p>`:''}<div class="db-tools"><button class="db-icon" data-action="theme-toggle" aria-pressed="${isDark()}" aria-label="${isDark()?'Light mode':'Dark mode'}" title="${isDark()?'Light mode':'Dark mode'}">${ic(isDark()?'sun':'moon')}</button><button class="db-icon" data-action="interests" aria-label="Interests and reading">${ic('leaf')}</button><button class="db-icon" data-action="menu" aria-label="Calendars and sources" aria-expanded="${menu}">${ic('more')}</button></div></header>${menu?menuView():''}<div class="db-today"><div class="db-plot" data-rs="${rs}" data-re="${re}">${hours}<div class="db-track">${open}<div class="db-sel" ${pendingRange&&pendingRange.date===today?`style="top:${pct(mins(pendingRange.start))}%;height:${(mins(pendingRange.end)-mins(pendingRange.start))/total*100}%"`:'hidden'}><span>${pendingRange&&pendingRange.date===today?`${time(pendingRange.start)} to ${time(pendingRange.end)}`:''}</span></div>${placed.length?blocks:`<p class="db-empty">Nothing timed in your visible calendars today.${hidden.size?' Some calendars are hidden.':''}</p>`}</div><div class="db-notes">${notes}<div class="db-plinth" aria-hidden="true">${scene('stones')}</div></div>${nowMin>=rs&&nowMin<=re?`<div class="db-now" style="top:${pct(nowMin)}%"><span>${time(clock(new Date()))}</span></div>`:''}</div></div></section>`;
+    return `<section class="db-left" aria-label="Today"><header class="db-head"><p class="db-eyebrow">${label(today,{weekday:'long'})} · ${label(today,{month:'long',day:'numeric',year:'numeric'})}</p><h1 class="db-title">Today</h1><p class="db-sub"><span><b>${upcoming}</b> still ahead</span>${biggest?`<span>Open from <b>${time(hm(biggest[0]))}</b> to <b>${time(hm(biggest[1]))}</b></span>`:''}</p>${allLine.length?`<p class="db-allday">All day · ${e(allLine.join(' · '))}</p>`:''}<div class="db-tools"><button class="db-icon" data-action="theme-toggle" aria-pressed="${isDark()}" aria-label="${isDark()?'Light mode':'Dark mode'}" title="${isDark()?'Light mode':'Dark mode'}">${ic(isDark()?'sun':'moon')}</button><button class="db-icon" data-action="interests" aria-label="Interests and reading">${ic('leaf')}</button><button class="db-icon" data-action="menu" aria-label="Calendars and sources" aria-expanded="${menu}">${ic('more')}</button></div></header>${menu?menuView():''}<div class="db-today"><div class="db-plot" data-rs="${rs}" data-re="${re}">${hours}<div class="db-track">${open}<div class="db-sel" ${pendingRange&&pendingRange.date===today?`style="top:${pct(mins(pendingRange.start))}%;height:${(mins(pendingRange.end)-mins(pendingRange.start))/total*100}%"`:'hidden'}><span>${pendingRange&&pendingRange.date===today?`${time(pendingRange.start)} to ${time(pendingRange.end)}`:''}</span></div>${placed.length?blocks:`<p class="db-empty">Nothing timed in your visible calendars today.${hidden.size?' Some calendars are hidden.':''}</p>`}</div><div class="db-notes">${setupLeft().length ? `<button class="db-setup-card" data-action="setup-resume"><span class="db-eyebrow">${ic('spark')}Setup · ${4 - setupLeft().length} of 4 done</span><strong>Finish setting up Today</strong><span class="db-setup-go">Continue<span class="db-ob-arr" aria-hidden="true">→</span></span></button>` : ''}${notes}<div class="db-plinth" aria-hidden="true">${scene('stones')}</div></div>${nowMin>=rs&&nowMin<=re?`<div class="db-now" style="top:${pct(nowMin)}%"><span>${time(clock(new Date()))}</span></div>`:''}</div></div></section>`;
   }
   function itemLarge(t, crowded){
     const x = t.x;
-    if (t.kind==='event') { const learned = x.date < today && plainText(docs['event:'+x.id]?.body); return `<div class="db-evwrap"><button class="db-ev ${cls(x)}" data-action="event:${e(x.id)}" style="--c:${color(x.sourceId)}">${aura(x.id)}<small>${span(x)}</small><strong>${e(x.title)}</strong>${x.date < today ? `<em class="db-learn ${learned?'done':''}">${learned ? e('Learned · ' + learned.slice(0,60)) : 'Note what you learned'}</em>` : imported(x)?'<em>Imported · attendance unknown</em>':hold(x)?'<em>Hold · not confirmed</em>':''}</button><button class="db-x" data-action="hide:${e(x.id)}" aria-label="Hide this event" title="Hide this event">×</button></div>`; }
+    if (t.kind==='event') { const learned = x.date < today && plainText(docs['event:'+x.id]?.body); return `<div class="db-evwrap"><button class="db-ev ${cls(x)} ${x.accepted?'accepted':''} ${morph.has(x.id)?'db-morph':''}" data-action="${x.accepted?'note:'+e(x.noteId):'event:'+e(x.id)}" style="--c:${color(x.sourceId)}">${aura(x.id)}<small>${span(x)}</small><strong>${e(x.title)}</strong>${x.date < today ? `<em class="db-learn ${learned?'done':''}">${learned ? e('Learned · ' + learned.slice(0,60)) : 'Note what you learned'}</em>` : imported(x)?'<em>Imported · attendance unknown</em>':hold(x)?'<em>Hold · not confirmed</em>':''}</button>${x.accepted?'':`<button class="db-x" data-action="hide:${e(x.id)}" aria-label="Hide this event" title="Hide this event">×</button>`}</div>`; }
     if (t.kind==='rest') return `<div class="db-tile"><button class="db-tile-main" data-action="note:${e(x.id)}"><span class="db-frame" style="--h:calc(${crowded?84:124}px*var(--s,1))">${scene(artFor(x))}</span><span class="db-cap"><span class="db-eyebrow">Suggestion${x.suggestion?' · '+time(x.suggestion.start):''}</span><strong>${e(x.title)}</strong>${crowded?'':`<p>${e(x.body)}</p>`}</span></button>${suggestionFor(x)?`<div class="db-accept-row">${acceptBtn(x)}</div>`:''}<button class="db-x" data-action="dismiss:${e(x.id)}" aria-label="Not for me" title="Not for me">×</button></div>`;
     if (t.kind==='artifact') return `<div class="db-evwrap"><button class="db-folio" data-action="note:${e(x.id)}"><span class="db-thumb" style="height:calc(${crowded?52:74}px*var(--s,1))">${scene('paper')}</span><span><span class="db-eyebrow">Prepared</span><strong>${e(x.title)}</strong><p>${e(x.body)}</p>${crowded?'':`<span class="db-link">${ic('doc')}${e(x.label||'Open brief')}${accepted.has(x.id)?' · time held':''}</span>`}</span></button><button class="db-x" data-action="dismiss:${e(x.id)}" aria-label="Dismiss this brief" title="Dismiss this brief">×</button></div>`;
     if (t.kind==='idea') return `<div class="db-idea ${x.working?'working':''} ${fresh.has(x.id)?'db-fresh':''}"><button class="db-idea-main" data-action="${x.summary?'plan:'+e(x.planId):'note:'+e(x.id)}"><span class="db-eyebrow">${ideaLabel(x)}${x.time?' · '+time(x.time):''}</span><strong>${e(x.title)}</strong>${crowded?'':`<span class="db-d">${e(x.body)}</span>`}</button>${x.summary?'':`<div class="db-accept-row">${acceptBtn(x)}</div>`}<button class="db-x" data-action="dismiss:${e(x.summary?'plan-'+x.planId:x.id)}" aria-label="Not for me" title="Not for me">×</button></div>`;
@@ -742,7 +922,7 @@ export function mountDaybook(root, bridge = {}) {
   }
   function itemChip(t){
     const x = t.x;
-    if (t.kind==='event') return `<button class="db-chip ${cls(x)}" data-action="event:${e(x.id)}" style="--c:${color(x.sourceId)}">${aura(x.id)}<span>${time(x.start)}</span><b>${e(x.title)}</b></button>`;
+    if (t.kind==='event') return `<button class="db-chip ${cls(x)} ${x.accepted?'accepted':''} ${morph.has(x.id)?'db-morph':''}" data-action="${x.accepted?'note:'+e(x.noteId):'event:'+e(x.id)}" style="--c:${color(x.sourceId)}">${aura(x.id)}<span>${time(x.start)}</span><b>${e(x.title)}</b></button>`;
     return `<button class="db-chip ${t.kind==='rest'?'rest':t.kind==='idea'?'idea':'paper'} ${x.working?'working':''} ${fresh.has(x.id)?'db-fresh':''}" data-action="${x.summary?'plan:'+e(x.planId):'note:'+e(x.id)}"><b>${e(x.title)}</b></button>`;
   }
   function column(d, large){
@@ -972,7 +1152,7 @@ export function mountDaybook(root, bridge = {}) {
     if (kind === 'plan') {
       const pl = plans.find(q=>q.id===id);
       if (!pl) return {key:`plan:${id}`, kind, editable:false, kicker:'Plan', title:'This plan is no longer here', dek:'', byline:'', foot:''};
-      if (pl.kind === 'move') {
+      if (pl.kind !== 'research') {
         const rows = (pl.items||[]).map(it=>`<div class="db-option"><div><span class="db-eyebrow">${shortDate(it.date)} · ${time(it.suggestion.start)} to ${time(it.suggestion.end)}</span><strong>${e(it.title)}</strong><p>${e(it.body)}</p></div>${acceptBtn(it)}</div>`).join('');
         const open = (pl.items||[]).filter(it=>!accepted.has(it.id)).length;
         return {key:`plan:${id}`, kind, editable:false, kicker:'Plan · this week', title:pl.title, dek:`You said: “${pl.text}”`, byline:'Found across all your calendars', agenda: rows ? `<div class="db-options">${rows}</div>` : '<p class="db-doc-hint">No open time fit this week.</p>', actions: open > 1 ? `<button class="db-pill" data-action="acceptall:${e(id)}">${ic('check')}Accept all ${open}</button><span class="db-doc-hint">Private blocks, no guests.<br>Remove any of them later from your calendar.</span>` : '', foot:'Times avoid every connected calendar and leave a little room around other plans. Imported events you may not attend are ignored.'};
@@ -1071,7 +1251,8 @@ export function mountDaybook(root, bridge = {}) {
       if (bridge.reserve) await bridge.reserve(sg, id);
       accepted.add(id);
       if (!bridge.reserve) localStorage.setItem(ACCEPT_KEY, JSON.stringify([...accepted]));
-      render();
+      prefs.accepted = [...accepted].slice(-300); savePrefs().catch(() => {});
+      morph.add('acc-' + id); render(); setTimeout(() => morph.delete('acc-' + id), 1400);
       showToast(bridge.reserve ? `On your calendar · ${shortDate(sg.date)}, ${time(sg.start)}` : 'Accepted. In the installed app this goes on your calendar.');
     } catch (err) { btns.forEach(b=>{ b.disabled = false; b.classList.remove('is-busy'); b.lastChild.textContent = 'Accept'; }); showToast(err.message || 'Could not add it to your calendar.'); }
   }
@@ -1096,6 +1277,7 @@ export function mountDaybook(root, bridge = {}) {
     else if (a === 'ob-skip') obNext(true);
     else if (a === 'ob-back') obBack();
     else if (a === 'ob-finish') obFinish();
+    else if (a === 'setup-resume') resumeSetup();
     else if (a.startsWith('ob-chip:')) { const t = a.slice(8); if (ob.picks.has(t)) ob.picks.delete(t); else ob.picks.add(t); b.setAttribute('aria-pressed', String(ob.picks.has(t))); }
     else if (a.startsWith('ob-look:')) setTheme(a.slice(8));
     else if (a === 'theme-toggle') setTheme(isDark() ? 'light' : 'dark');
@@ -1122,9 +1304,7 @@ export function mountDaybook(root, bridge = {}) {
   shell.addEventListener('submit', async ev => { ev.preventDefault();
     const add = ev.target.closest?.('.db-add');
     if (add) { const list = add.dataset.list, v = add.querySelector('input').value.trim(); if (list === 'near') interests.near = v; else if (v && !interests[list].some(x=>x.toLowerCase()===v.toLowerCase())) interests[list] = [...interests[list], v].slice(-20); try { await saveInterests(); } catch (err) { showToast(err.message || 'Could not save.'); } render({only:'left', focus:`.db-add[data-list="${list}"] input`}); if (!stacks.right.length) render({only:'right'}); showToast(list === 'reading' && v ? 'Added. Your agent will find time to read.' : 'Saved.'); return; } const input = shell.querySelector('[name="context"]'), value = input.value.trim(); if (!value) return;
-    const wantsPlace = MUSEUM.test(value) || FOOD.test(value) || /\b(somewhere|places? to|things? to do|go out|nearby)\b/i.test(value);
-    if (MOVE.test(value) || wantsPlace) { contextDraft = ''; bridge.context?.(value).catch(()=>{}); try { if (MOVE.test(value)) await createMovePlan(value); else { const r = rangeFromText(value); if (r) await createResearch(value, r); else { render(); showToast('No open time on that day. Try another day.'); } } } catch (err) { showToast(err.message || 'Could not plan that.'); } return; }
-    try { if (bridge.context) await bridge.context(value); else data.notes.push({id:'local-'+Date.now(),date:today,time:clock(new Date()),type:'context',title:'For later',body:value}); contextDraft = ''; contextHint = ''; render(); showToast(bridge.context?'Kept for your agent.':'Kept in this preview only.'); } catch (err) { showToast(err.message||'Could not keep this note.'); } });
+    try { await routeRequest(value); } catch (err) { showToast(err.message || 'Could not plan that.'); } });
   const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { applyScale(); fitHeader(); const p = shell.querySelector('.db-pager'); if (p && !animating) { setX(-page[view] * stepW()); fitColumns(); } }) : null; ro?.observe(shell);
   const scheme = typeof MutationObserver === 'function' ? new MutationObserver(() => shell.classList.toggle('dark', isDark())) : null; scheme?.observe(document.documentElement, {attributes:true, attributeFilter:['data-color-scheme','class','style']});
   const tick = setInterval(() => {

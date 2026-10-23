@@ -4,7 +4,7 @@
   "namespace": "daybook",
   "displayName": "Today",
   "description": "Your calendars in one calm view: today in focus, the days ahead prepared, and an agent that turns a passing thought into a plan.",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "compatibility": {
     "sdk": "^0.13.7"
   },

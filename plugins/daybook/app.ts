@@ -175,7 +175,9 @@ Return the structured snapshot: version 3, fetchedAt now, timezone ${TZ}, snapsh
       if (!db) throw new Error(storageError || 'Storage access is needed before this can be saved.');
       const clean = (list: any, n: number) => (Array.isArray(list) ? list : []).slice(-n).map((d: any) => ({ id: String(d.id || '').slice(0, 200), title: String(d.title || '').slice(0, 200), at: String(d.at || '') })).filter((d: any) => d.id);
       const theme = ['auto', 'light', 'dark'].includes(payload.prefs.theme) ? payload.prefs.theme : 'auto';
-      prefs = { dismissed: clean(payload.prefs.dismissed, 200), hiddenEvents: clean(payload.prefs.hiddenEvents, 300), theme, owner: String(payload.prefs.owner || '').slice(0, 200), onboarded: typeof payload.prefs.onboarded === 'boolean' ? payload.prefs.onboarded : undefined };
+      const setup: any = {}; for (const k of ['calendars', 'mail', 'you', 'look']) { const v = payload.prefs.setup?.[k]; if (v === 'done' || v === 'skipped') setup[k] = v; }
+      const acceptedIds = (Array.isArray(payload.prefs.accepted) ? payload.prefs.accepted : []).filter((x: any) => typeof x === 'string').slice(-300).map((x: string) => x.slice(0, 200));
+      prefs = { dismissed: clean(payload.prefs.dismissed, 200), hiddenEvents: clean(payload.prefs.hiddenEvents, 300), theme, owner: String(payload.prefs.owner || '').slice(0, 200), onboarded: typeof payload.prefs.onboarded === 'boolean' ? payload.prefs.onboarded : undefined, setup, accepted: acceptedIds };
       set('prefs', prefs);
     } else prefs = get('prefs') || prefs;
     return { ...prefs, hasSnapshot: !!cache };
