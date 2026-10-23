@@ -1524,7 +1524,7 @@ function TodayPage() {
         if (!result?.created) throw new Error(result?.message || 'The event was not added.');
         return result;
       },
-      version: "0.11.0",
+      version: "0.11.1",
       latest: async () => ((await kayApi.invokeExtensionEndpoint('daybook.latest', {})) as any)?.version || '',
       loadPrefs: () => kayApi.invokeExtensionEndpoint('daybook.prefs', {}),
       loadPeople: async () => ((await kayApi.invokeExtensionEndpoint('daybook.people', {})) as any)?.people ?? [],
