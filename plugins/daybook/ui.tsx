@@ -262,9 +262,25 @@ function mountDaybook(root, bridge = {}) {
   const dur = m => m >= 60 ? `${Math.floor(m/60)}h${m%60?' '+(m%60)+'m':''}` : `${m}m`;
   const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const hostDark = () => { const a = document.documentElement.dataset?.colorScheme; if (a) return a === 'dark'; const bg = getComputedStyle(document.documentElement).getPropertyValue('--kay-color-bg-base').trim(); if (/^#([0-9a-f]{6})/i.test(bg)) { const n = parseInt(bg.slice(1,7),16); return ((n>>16)*.3 + ((n>>8)&255)*.59 + (n&255)*.11) < 110; } return !!window.matchMedia?.('(prefers-color-scheme: dark)').matches; };
+  // Text a person reads uses calendar times (7pm, 8:15pm, 12am), never 24-hour times like 19:00.
+  function humanTimes(t){
+    if (typeof t !== 'string') return t;
+    return t.replace(/(^|[^\d:./])((?:[01]?\d|2[0-3])):([0-5]\d)(?!\d|:|\s?(?:am|pm|a\.m\.|p\.m\.)\b)/gi, (m, pre, hh, mm) => {
+      const h = Number(hh); if (h > 0 && h < 12 && hh[0] !== '0') return m;
+      return `${pre}${h % 12 || 12}${mm === '00' ? '' : ':' + mm}${h >= 12 ? 'pm' : 'am'}`;
+    });
+  }
+  function humanizeData(d){
+    if (!d || typeof d !== 'object') return d;
+    for (const n of d.notes || []) { n.title = humanTimes(n.title); n.body = humanTimes(n.body); if (n.label) n.label = humanTimes(n.label); }
+    for (const x of d.events || []) if (Array.isArray(x.context)) x.context.forEach(c => { if (c && typeof c.text === 'string') c.text = humanTimes(c.text); });
+    for (const k of ['briefs', 'docs', 'artifacts']) { const b = d[k]; if (b && typeof b === 'object') for (const key of Object.keys(b)) { const v = b[key]; if (typeof v === 'string') b[key] = humanTimes(v); else if (v && typeof v === 'object') for (const f of ['title', 'dek', 'body', 'html']) if (typeof v[f] === 'string') v[f] = humanTimes(v[f]); } }
+    return d;
+  }
+  function humanizePlans(list){ for (const p0 of list || []) { for (const f of ['title', 'reply', 'replyBody', 'note']) if (typeof p0[f] === 'string') p0[f] = humanTimes(p0[f]); for (const it of p0.items || []) { it.title = humanTimes(it.title); it.body = humanTimes(it.body); } } return list; }
   const isDark = () => prefs?.theme === 'dark' ? true : prefs?.theme === 'light' ? false : hostDark();
   const today = dateKey(new Date()), tomorrow = add(today,1);
-  let data = bridge.initialData || null, view = '3', page = {'3':0,'7':0,month:0}, hidden = new Set(), menu = false, accepted = new Set(), busy = false, origin = null, toastTimer, disposed = false, lastError = '', contextDraft = '', contextHint = '', flash = null, anim = 0, animating = false, wheelAcc = 0, wheelLock = false, wheelQuiet = 0, scrollRaf = 0;
+  let data = humanizeData(bridge.initialData) || null, view = '3', page = {'3':0,'7':0,month:0}, hidden = new Set(), menu = false, accepted = new Set(), busy = false, origin = null, toastTimer, disposed = false, lastError = '', contextDraft = '', contextHint = '', flash = null, anim = 0, animating = false, wheelAcc = 0, wheelLock = false, wheelQuiet = 0, scrollRaf = 0;
   const style = document.createElement('style'); style.textContent = css; root.append(style);
   const shell = document.createElement('div'); shell.className = 'db'; root.append(shell);
   // ---- Sky: Collide's birds, kite and the seldom hot air balloon, redrawn in Daybook's palette ----
@@ -397,7 +413,8 @@ function mountDaybook(root, bridge = {}) {
   bubble.innerHTML = [['bold','<b>B</b>','Bold'],['italic','<i style="font-family:Georgia,serif">i</i>','Italic'],['h2','H','Heading'],['quote','“','Quote'],['list','•','List']].map(([c,l,n])=>`<button type="button" data-format="${c}" aria-label="${n}">${l}</button>`).join('');
   const DOCS_KEY = 'daybook-docs'; let docs = {}; const stacks = {left:[], right:[]}, dirty = {left:false, right:false}, saveText = {left:'', right:''}, saveTimers = {}, returnFocus = {left:null, right:null};
   const cal = id => (data?.calendars||[]).find(c=>c.id===id) || {};
-  const color = id => { const c = cal(id); if (c.color) return c.color; const i = (data?.calendars||[]).findIndex(x=>x.id===id); return palette[Math.max(0,i)%palette.length]; };
+  const softHex = (hex, k = 0.84) => { const m = String(hex || '').trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i); if (!m) return null; let h = m[1]; if (h.length === 3) h = h.split('').map(c0 => c0 + c0).join(''); const n = parseInt(h, 16), base = [246, 243, 236]; const ch = i => Math.round(((n >> (16 - 8 * i)) & 255) * (1 - k) + base[i] * k); return '#' + [0, 1, 2].map(i => ch(i).toString(16).padStart(2, '0')).join(''); };
+  const color = id => { const c = cal(id); const soft = c.color ? softHex(c.color) : null; if (soft) return soft; const i = (data?.calendars||[]).findIndex(x=>x.id===id); return palette[Math.max(0,i)%palette.length]; };
   const imported = x => cal(x.sourceId).kind === 'imported' || x.sourceId === 'partiful';
   const hold = x => /hold|tentative/i.test(x.status||'') || /^hold\b/i.test(x.title||'');
   const marker = x => x.kind === 'workingLocation' || (!x.start && /^(home|office|remote)$/i.test(x.title||''));
@@ -666,7 +683,7 @@ function mountDaybook(root, bridge = {}) {
   const WORDS = ['No','One','Two','Three','Four','Five','Six'];
   const plainText = html => String(html||'').replace(/<h2>.*?<\/h2>/g,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
   const findNote = id => allNotes().find(n=>n.id===id) || plans.flatMap(p=>p.items||[]).find(n=>n.id===id);
-  async function loadPlans(){ try { const v = bridge.loadPlans ? await bridge.loadPlans() : JSON.parse(localStorage.getItem(PLAN_KEY) || '[]'); if (Array.isArray(v)) plans = v; } catch {} }
+  async function loadPlans(){ try { const v = bridge.loadPlans ? await bridge.loadPlans() : JSON.parse(localStorage.getItem(PLAN_KEY) || '[]'); if (Array.isArray(v)) plans = humanizePlans(v); } catch {} }
   async function savePlans(){ if (bridge.savePlans) await bridge.savePlans(plans); else localStorage.setItem(PLAN_KEY, JSON.stringify(plans)); }
   function schedulePoll(){
     clearInterval(planPoll);
@@ -1213,7 +1230,7 @@ function mountDaybook(root, bridge = {}) {
     return `<button class="db-chip ${t.kind==='rest'?'rest':t.kind==='idea'?'idea':'paper'} ${x.working?'working':''} ${fresh.has(x.id)?'db-fresh':''}" data-action="${x.summary?'plan:'+e(x.planId):'note:'+e(x.id)}"><b>${e(x.title)}</b></button>`;
   }
   function column(d, large){
-    const isPast = d < today, items0 = dayItems(d), {markers, allDay} = items0, timed = isPast ? items0.timed.filter(t=>t.kind==='event') : items0.timed.filter(t=>t.kind!=='context'), loaded = d <= rangeEnd();
+    const isPast = d < today, items0 = dayItems(d), {markers, allDay} = items0, timed = isPast ? items0.timed.filter(t=>t.kind==='event') : items0.timed.filter(t=>t.kind!=='context' && t.kind!=='reply'), loaded = d <= rangeEnd();
     const head = large ? `<span class="db-num">${label(d,{day:'numeric'})}</span><span><span class="db-eyebrow">${rel(d)}</span><br><span class="db-mon">${label(d,{month:'long'})}</span></span>${markers.length?`<span class="db-mark">${e(markers.map(m=>m.title).join(', '))}</span>`:''}${!isPast?`<button class="db-plan" data-action="plantime:${d}" aria-label="New event on ${label(d,{weekday:'long'})}" title="New event">${ic('plus')}</button>`:''}` : `<span class="db-eyebrow">${label(d,{weekday:'short'})}</span><span class="db-num">${label(d,{day:'numeric'})}</span>`;
     const ad = allDay.map(x=>`<button class="db-ad" data-action="event:${e(x.id)}">${e(x.title)}</button>`).join('');
     const crowded = timed.reduce((w,t)=>w+(t.kind==='event'||t.kind==='idea'?1:t.kind==='context'?.5:2),0) >= 5;
@@ -1382,7 +1399,7 @@ function mountDaybook(root, bridge = {}) {
     if (v===view && !focusDate) return;
     const anchor = focusDate || pageStart(view,page[view]); view = v;
     if (v==='month') { const a = date(today), b = date(anchor); page.month = Math.max(0,(b.getUTCFullYear()-a.getUTCFullYear())*12 + b.getUTCMonth()-a.getUTCMonth()); }
-    else page[v] = Math.max(0, Math.min(pageCount(v)-1, dayIndex(anchor) - (focusDate ? (v === '3' ? 1 : 3) : 0)));
+    else { let pg = dayIndex(anchor) - (focusDate ? (v === '3' ? 1 : 3) : 0); if (anchor >= tomorrow) pg = Math.max(pg, before(v)); page[v] = Math.max(0, Math.min(pageCount(v)-1, pg)); }
     flash = focusDate || null; render({only:'right', cascade:true}); shell.querySelector(`[data-action="view:${v}"]`)?.focus({preventScroll:true}); setTimeout(()=>{ flash=null; },1900);
   }
   const longDate = d => label(d,{weekday:'long',month:'long',day:'numeric'});
@@ -1530,7 +1547,7 @@ function mountDaybook(root, bridge = {}) {
     const focus = stacks[side].length ? `.db-docwrap[data-side="${side}"] .db-back` : returnFocus[side] ? `.db-${side} [data-action="${CSS.escape(returnFocus[side])}"]` : null;
     render({only: side, cascade: !stacks[side].length, focus});
   }
-  async function refresh(){ if (busy) return; busy = true; lastError = ''; menu = false; render(); try { if (!bridge.load) throw Error('Live refresh works once the app is installed in Bonsai. This preview shows a timestamped calendar snapshot.'); const next = await bridge.load({refresh:true}); if (disposed) return; data = next; showToast('Calendars updated.'); } catch (err) { lastError = err.message || 'Calendar refresh failed.'; showToast(lastError); } finally { busy = false; clearInterval(loadTimer); render({cascade: true}); } }
+  async function refresh(){ if (busy) return; busy = true; lastError = ''; menu = false; render(); try { if (!bridge.load) throw Error('Live refresh works once the app is installed in Bonsai. This preview shows a timestamped calendar snapshot.'); const next = await bridge.load({refresh:true}); if (disposed) return; data = humanizeData(next); showToast('Calendars updated.'); } catch (err) { lastError = err.message || 'Calendar refresh failed.'; showToast(lastError); } finally { busy = false; clearInterval(loadTimer); render({cascade: true}); } }
   const ACCEPT_KEY = 'daybook-accepted';
   try { if (!bridge.reserve) JSON.parse(localStorage.getItem(ACCEPT_KEY) || '[]').forEach(id => accepted.add(id)); } catch {}
   async function accept(id){
@@ -1628,7 +1645,7 @@ function mountDaybook(root, bridge = {}) {
     else if (!data) refresh();
     render(); schedulePoll(); checkLatest();
   });
-  return { setServices(list){ const had = anyCalendar(); services = list; if (!had && anyCalendar() && !data && booted) refresh(); else render(); }, setPerson(){ }, update(next){ data = next; render(); }, dispose(){ disposed = true; mossLayer.remove(); clearInterval(skyTimer); clearInterval(obTickTimer); clearTimeout(obTimer); clearTimeout(toastTimer); clearInterval(tick); cancelAnimationFrame(anim); ro?.disconnect(); scheme?.disconnect(); document.removeEventListener('selectionchange', placeBubble); root.replaceChildren(); } };
+  return { setServices(list){ const had = anyCalendar(); services = list; if (!had && anyCalendar() && !data && booted) refresh(); else render(); }, setPerson(){ }, update(next){ data = humanizeData(next); render(); }, dispose(){ disposed = true; mossLayer.remove(); clearInterval(skyTimer); clearInterval(obTickTimer); clearTimeout(obTimer); clearTimeout(toastTimer); clearInterval(tick); cancelAnimationFrame(anim); ro?.disconnect(); scheme?.disconnect(); document.removeEventListener('selectionchange', placeBubble); root.replaceChildren(); } };
 }
 
 function TodayPage() {
@@ -1667,7 +1684,7 @@ function TodayPage() {
         if (!result?.created) throw new Error(result?.message || 'The event was not added.');
         return result;
       },
-      version: "0.12.6",
+      version: "0.12.7",
       latest: async () => ((await kayApi.invokeExtensionEndpoint('daybook.latest', {})) as any)?.version || '',
       loadPrefs: () => kayApi.invokeExtensionEndpoint('daybook.prefs', {}),
       loadPeople: async () => ((await kayApi.invokeExtensionEndpoint('daybook.people', {})) as any)?.people ?? [],
