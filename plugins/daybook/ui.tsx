@@ -304,18 +304,48 @@ function mountDaybook(root, bridge = {}) {
   <g fill="#000" filter="url(#m)">${blobs.join('')}</g></svg>`;
   }
   const MOSS_SPOTS = [
-    {seed: 23, w: 100, h: 80, css: 'left:-46px;top:-48px', rot: -8},
     {seed: 11, w: 150, h: 110, css: 'right:-50px;top:-46px', rot: 12},
-    {seed: 3, w: 170, h: 110, css: 'left:-52px;bottom:-48px', rot: 6},
     {seed: 7, w: 124, h: 86, css: 'right:-38px;bottom:-48px', rot: -10},
-    {seed: 19, w: 104, h: 150, css: 'left:-60px;top:38%', rot: 4},
-    {seed: 29, w: 78, h: 96, css: 'left:-44px;top:69%', rot: -6},
   ];
-  let mossDark = null;
-  function paintMoss(dark){
-    if (mossDark === dark && mossLayer.childElementCount) return;
-    mossDark = dark;
-    mossLayer.innerHTML = MOSS_SPOTS.map(m => `<img alt="" src="data:image/svg+xml,${encodeURIComponent(mossSVG(m.seed, m.w, m.h, dark))}" style="${m.css.replace(/(-?\d+)px/g, (x, n) => `calc(${n}px*var(--s,1))`)};width:calc(${m.w}px*var(--s,1));height:calc(${m.h}px*var(--s,1));transform:rotate(${m.rot}deg)">`).join('');
+  // The left edge: one thin, continuous seam of sheet moss, drawn at the window's real height so the texture never stretches.
+  function mossStripSVG(H, k, dark){
+    const W = Math.round(48 * k), pts = [], seed = 31;
+    let r = seed * 9301 + 49297; const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+    const ph1 = rnd() * 6, ph2 = rnd() * 6;
+    for (let y = 0; y <= H; y += 14) {
+      const t = y / H, corner = Math.max(0, 1 - t / 0.09) ** 2 * 18 + Math.max(0, 1 - (1 - t) / 0.11) ** 2 * 22;
+      const w = (8 + 3.2 * Math.sin(y / 96 + ph1) + 2.2 * Math.sin(y / 31 + ph2) + rnd() * 2 + corner) * k;
+      pts.push(`${Math.max(3 * k, w).toFixed(1)},${y}`);
+    }
+    const tint = dark ? '0.26 0 0 0 0.11  0.28 0 0 0 0.15  0.14 0 0 0 0.07  0 0 0 0 1' : '0.36 0 0 0 0.18  0.37 0 0 0 0.23  0.19 0 0 0 0.10  0 0 0 0 1';
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" preserveAspectRatio="none"><defs>
+<filter id="s" x="-20%" y="-2%" width="160%" height="104%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency="0.03 0.012" numOctaves="3" seed="${seed}" result="lump"/>
+<feDisplacementMap in="SourceGraphic" in2="lump" scale="${(9 * k).toFixed(1)}" xChannelSelector="R" yChannelSelector="G" result="blob"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="${seed + 3}" result="fray"/>
+<feDisplacementMap in="blob" in2="fray" scale="3.5" xChannelSelector="R" yChannelSelector="G" result="shape"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.5 0.36" numOctaves="5" seed="${seed + 5}" result="grain"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="${seed + 7}" result="mottle"/>
+<feComposite in="grain" in2="mottle" operator="arithmetic" k2="0.72" k3="0.38" k4="-0.08" result="mixed"/>
+<feColorMatrix in="mixed" type="matrix" values="${tint}" result="tint"/>
+<feGaussianBlur in="shape" stdDeviation="${(3 * k).toFixed(1)}" result="dome"/>
+<feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" seed="${seed + 9}" result="bump"/>
+<feComposite in="dome" in2="bump" operator="arithmetic" k2="1" k3="0.45" result="height"/>
+<feDiffuseLighting in="height" surfaceScale="5" diffuseConstant="1.1" lighting-color="${dark ? '#c4ceac' : '#f6f7e2'}" result="light"><feDistantLight azimuth="225" elevation="48"/></feDiffuseLighting>
+<feComposite in="tint" in2="light" operator="arithmetic" k1="1.45" k2="0.05" result="lit"/>
+<feComposite in="lit" in2="shape" operator="in" result="moss"/>
+<feGaussianBlur in="shape" stdDeviation="2" result="soft"/><feOffset in="soft" dx="2" dy="1" result="drop"/>
+<feColorMatrix in="drop" type="matrix" values="0 0 0 0 0.12  0 0 0 0 0.11  0 0 0 0 0.06  0 0 0 0.24 0" result="shadow"/>
+<feMerge><feMergeNode in="shadow"/><feMergeNode in="moss"/></feMerge></filter></defs>
+<path d="M-12,-4 L${pts.join(' L')} L-12,${H + 4} Z" fill="#000" filter="url(#s)"/></svg>`;
+  }
+  let mossDark = null, mossH = 0, mossTimer = 0;
+  function paintMoss(dark, force){
+    const H = Math.round(mossLayer.clientHeight || root.clientHeight || 0);
+    if (!force && mossDark === dark && mossLayer.childElementCount && Math.abs(H - mossH) < 24) return;
+    mossDark = dark; mossH = H;
+    const strip = H > 200 ? `<img class="db-moss-strip" alt="" src="data:image/svg+xml,${encodeURIComponent(mossStripSVG(H, scale, dark))}" style="left:0;top:0;bottom:0;width:${Math.round(48 * scale)}px;height:100%">` : '';
+    mossLayer.innerHTML = strip + MOSS_SPOTS.map(m => `<img alt="" src="data:image/svg+xml,${encodeURIComponent(mossSVG(m.seed, m.w, m.h, dark))}" style="${m.css.replace(/(-?\d+)px/g, (x, n) => `calc(${n}px*var(--s,1))`)};width:calc(${m.w}px*var(--s,1));height:calc(${m.h}px*var(--s,1));transform:rotate(${m.rot}deg)">`).join('');
   }
   let scale = 1;
   function applyScale(){
@@ -1569,7 +1599,7 @@ function mountDaybook(root, bridge = {}) {
     const add = ev.target.closest?.('.db-add');
     if (add) { const list = add.dataset.list, v = add.querySelector('input').value.trim(); if (list === 'near') interests.near = v; else if (v && !interests[list].some(x=>x.toLowerCase()===v.toLowerCase())) interests[list] = [...interests[list], v].slice(-20); try { await saveInterests(); } catch (err) { showToast(err.message || 'Could not save.'); } render({only:'left', focus:`.db-add[data-list="${list}"] input`}); if (!stacks.right.length) render({only:'right'}); showToast(list === 'reading' && v ? 'Added. Your agent will find time to read.' : 'Saved.'); return; } const input = shell.querySelector('[name="context"]'), value = input.value.trim(); if (!value) return;
     try { await routeRequest(value); } catch (err) { showToast(err.message || 'Could not plan that.'); } });
-  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { applyScale(); fitHeader(); const p = shell.querySelector('.db-pager'); if (p && !animating) { setX(-page[view] * stepW()); fitColumns(); } }) : null; ro?.observe(shell);
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { applyScale(); fitHeader(); clearTimeout(mossTimer); mossTimer = setTimeout(() => { if (!disposed) paintMoss(isDark()); }, 220); const p = shell.querySelector('.db-pager'); if (p && !animating) { setX(-page[view] * stepW()); fitColumns(); } }) : null; ro?.observe(shell);
   const scheme = typeof MutationObserver === 'function' ? new MutationObserver(() => shell.classList.toggle('dark', isDark())) : null; scheme?.observe(document.documentElement, {attributes:true, attributeFilter:['data-color-scheme','class','style']});
   const tick = setInterval(() => {
     if (dateKey(new Date()) !== today) { if (!stacks.left.length && !stacks.right.length) render(); return; }
@@ -1634,7 +1664,7 @@ function TodayPage() {
         if (!result?.created) throw new Error(result?.message || 'The event was not added.');
         return result;
       },
-      version: "0.12.2",
+      version: "0.12.3",
       latest: async () => ((await kayApi.invokeExtensionEndpoint('daybook.latest', {})) as any)?.version || '',
       loadPrefs: () => kayApi.invokeExtensionEndpoint('daybook.prefs', {}),
       loadPeople: async () => ((await kayApi.invokeExtensionEndpoint('daybook.people', {})) as any)?.people ?? [],
