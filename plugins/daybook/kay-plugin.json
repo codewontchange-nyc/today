@@ -1,0 +1,299 @@
+{
+  "protocol": "kay.plugin.v1",
+  "id": "com.cam.daybook",
+  "namespace": "daybook",
+  "displayName": "Today",
+  "description": "Your calendars in one calm view: today in focus, the days ahead prepared, and an agent that turns a passing thought into a plan.",
+  "version": "0.8.0",
+  "compatibility": {
+    "sdk": "^0.13.7"
+  },
+  "storage": {
+    "sqlite": {
+      "enabled": true,
+      "ownerTarget": "kay.app"
+    }
+  },
+  "targets": {
+    "kay": {
+      "app": {
+        "entrypoint": {
+          "module": "./app.ts"
+        },
+        "contributes": {
+          "endpoints": [
+            {
+              "localId": "snapshot",
+              "displayName": "Read and refresh calendar context",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "context",
+              "displayName": "Keep a thought for the agent",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "reserve",
+              "displayName": "Reserve an accepted calendar suggestion",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "docs",
+              "displayName": "Read the pages you edited",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "doc",
+              "displayName": "Save or restore one edited page",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "interests",
+              "displayName": "Read or save your interests and reading list",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "plans",
+              "displayName": "Read or save plans made from your thoughts",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "research",
+              "displayName": "Research options for a time you selected",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "create",
+              "displayName": "Add an event you made in Looking ahead",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "prefs",
+              "displayName": "Read or save what you hid or dismissed",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            },
+            {
+              "localId": "remove",
+              "displayName": "Delete an event you made, after you confirm",
+              "requestSchema": {
+                "type": "object"
+              },
+              "responseSchema": {
+                "type": "object"
+              }
+            }
+          ]
+        }
+      },
+      "ui": {
+        "entrypoint": {
+          "module": "./ui.tsx"
+        }
+      }
+    }
+  },
+  "permissions": {
+    "byTarget": {
+      "kay.app": {
+        "endpoints": [
+          {
+            "endpoint": "snapshot",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "context",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "reserve",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "docs",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "doc",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "interests",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "plans",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "research",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "create",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "prefs",
+            "operations": [
+              "register"
+            ]
+          },
+          {
+            "endpoint": "remove",
+            "operations": [
+              "register"
+            ]
+          }
+        ],
+        "storage": [
+          {
+            "kind": "sqlite",
+            "operations": [
+              "open",
+              "read",
+              "write"
+            ]
+          }
+        ]
+      },
+      "kay.ui": {
+        "endpoints": [
+          {
+            "endpoint": "snapshot",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "context",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "reserve",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "docs",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "doc",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "interests",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "plans",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "research",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "create",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "prefs",
+            "operations": [
+              "invoke"
+            ]
+          },
+          {
+            "endpoint": "remove",
+            "operations": [
+              "invoke"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

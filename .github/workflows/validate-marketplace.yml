@@ -1,0 +1,31 @@
+name: Validate marketplace
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth 0: the validator derives each skill's creator and
+      # contributors from git history over its directory. A shallow checkout
+      # has no history to derive them from, and would silently produce empty
+      # credits instead of failing loudly.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      # Check-only: this must fail the build on a stale index or any
+      # structural error, never rewrite the repo. Run the validator with
+      # --fix locally and commit the result instead.
+      - run: node tools/validate.mjs
+      # Signing is optional: a marketplace with no committed
+      # marketplace.index.sig is a perfectly valid, unsigned marketplace, and
+      # this step must stay green for it. It runs, and can fail the build,
+      # only when a marketplace.index.sig actually exists in the checkout.
+      - name: Verify marketplace.index.sig
+        if: hashFiles('marketplace.index.sig') != ''
+        run: node tools/sign.mjs --verify
