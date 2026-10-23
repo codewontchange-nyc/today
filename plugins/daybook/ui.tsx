@@ -176,6 +176,7 @@ function mountDaybook(root, bridge = {}) {
 .db-tl-hover i{flex:1;height:1px;background:var(--db-terracotta);opacity:.6}
 .db-tl-hover span{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--db-ink);color:var(--db-paper);box-shadow:var(--db-shadow);transition:transform .35s var(--db-spring)}.db-tl-hover:hover span{transform:scale(1.12)}
 .db-tl-hover span svg{width:12px;height:12px}
+.db-home{margin-right:8px;padding:3px 10px 4px;border-radius:999px;border:1px solid var(--db-hair-2);font-size:11.5px;font-weight:500;color:var(--db-ink-2);white-space:nowrap;transition:background .2s,color .2s,border-color .2s;animation:db-ob-arrive .35s var(--db-ease) both}.db-home:hover{background:var(--db-ink);color:var(--db-paper);border-color:var(--db-ink)}.db-home[hidden]{display:none}
 .db-moss{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}.db-moss img{position:absolute;display:block;user-select:none;-webkit-user-drag:none}
 @media(max-width:860px){.db-moss{display:none}}
 .db-sky{--sky-ink:rgba(32,44,39,.8);--sky-clay:#cf8a6a;--sky-sage:#a9b8a3;--sky-ochre:#dcb978;--sky-paper:#fbfaf6;position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;color:var(--sky-ink)}
@@ -1250,7 +1251,7 @@ function mountDaybook(root, bridge = {}) {
   }
   function aheadView(){
     const tabs = [['3','3 days'],['7','Week'],['month','Month']];
-    return `<section class="db-right" aria-label="Looking ahead"><header class="db-head">${busy?'<i class="db-progress" aria-hidden="true"></i>':''}<p class="db-eyebrow">${isBack(view,page[view])?'What you learned':'Plan gently'}</p><div class="db-headrow"><h2 class="db-title" data-back="${isBack(view,page[view])}">${isBack(view,page[view])?'Looking back':'Looking ahead'}</h2><div class="db-views" role="tablist" aria-label="Looking ahead range" style="--tab:${tabs.findIndex(t=>t[0]===view)}">${tabs.map(([v,l])=>`<button role="tab" aria-selected="${v===view}" data-action="view:${v}" tabindex="${v===view?0:-1}">${l}</button>`).join('')}<i aria-hidden="true"></i></div><div class="db-tools"><span class="db-range" aria-live="polite"></span><button class="db-icon" data-action="previous" aria-label="Previous">${ic('left')}</button><button class="db-icon" data-action="next" aria-label="Next">${ic('right')}</button></div></div></header><div class="db-pager" tabindex="0" aria-roledescription="carousel" aria-label="Looking ahead. Swipe or use the arrow keys to move between pages."><div class="db-rail">${pages()}</div></div><div class="db-promptwrap">${whom ? whomView() : ''}<form class="db-context"><input name="context" value="${e(contextDraft)}" aria-label="Leave context for the agent" placeholder="${e(contextHint||'Ask for something, like a museum Saturday afternoon…')}" autocomplete="off" maxlength="1000"><button type="submit" aria-label="Save context">${ic('up')}</button></form></div><footer class="db-foot"><span>${busy?'Updating…':e(sourceLine())}</span><button data-action="status">${data.snapshot?'Snapshot':'Updated'} · ${new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}).format(new Date(data.fetchedAt||Date.now()))}</button></footer></section>`;
+    return `<section class="db-right" aria-label="Looking ahead"><header class="db-head">${busy?'<i class="db-progress" aria-hidden="true"></i>':''}<p class="db-eyebrow">${isBack(view,page[view])?'What you learned':'Plan gently'}</p><div class="db-headrow"><h2 class="db-title" data-back="${isBack(view,page[view])}">${isBack(view,page[view])?'Looking back':'Looking ahead'}</h2><div class="db-views" role="tablist" aria-label="Looking ahead range" style="--tab:${tabs.findIndex(t=>t[0]===view)}">${tabs.map(([v,l])=>`<button role="tab" aria-selected="${v===view}" data-action="view:${v}" tabindex="${v===view?0:-1}">${l}</button>`).join('')}<i aria-hidden="true"></i></div><div class="db-tools"><button class="db-home" data-action="home" hidden>Tomorrow</button><span class="db-range" aria-live="polite"></span><button class="db-icon" data-action="previous" aria-label="Previous">${ic('left')}</button><button class="db-icon" data-action="next" aria-label="Next">${ic('right')}</button></div></div></header><div class="db-pager" tabindex="0" aria-roledescription="carousel" aria-label="Looking ahead. Swipe or use the arrow keys to move between pages."><div class="db-rail">${pages()}</div></div><div class="db-promptwrap">${whom ? whomView() : ''}<form class="db-context"><input name="context" value="${e(contextDraft)}" aria-label="Leave context for the agent" placeholder="${e(contextHint||'Ask for something, like a museum Saturday afternoon…')}" autocomplete="off" maxlength="1000"><button type="submit" aria-label="Save context">${ic('up')}</button></form></div><footer class="db-foot"><span>${busy?'Updating…':e(sourceLine())}</span><button data-action="status">${data.snapshot?'Snapshot':'Updated'} · ${new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'}).format(new Date(data.fetchedAt||Date.now()))}</button></footer></section>`;
   }
   function sourceLine(){
     const p = data.coverage?.providers || [];
@@ -1297,6 +1298,7 @@ function mountDaybook(root, bridge = {}) {
     if (t && t.dataset.back !== String(back)) { t.dataset.back = String(back); t.textContent = back ? 'Looking back' : 'Looking ahead'; if (eb) eb.textContent = back ? 'What you learned' : 'Plan gently'; t.classList.remove('db-swap'); void t.offsetWidth; t.classList.add('db-swap'); }
     if (strip(view)) { const a = page[view], b = a + Number(view); shell.querySelectorAll('.db-strip > .db-col').forEach((el, k) => { const off = k < a || k >= b; if (el.inert !== off) el.inert = off; }); shell.querySelector('.db-strip')?.setAttribute('aria-hidden', 'false'); shell.querySelector('.db-strip')?.setAttribute('aria-label', rangeLabel(view, page[view])); }
     else shell.querySelectorAll('.db-page').forEach((el,i)=>{ el.inert = i !== page[view]; el.setAttribute('aria-hidden', String(i !== page[view])); });
+    const hb = shell.querySelector('.db-home'); if (hb) { const atHome = view === 'month' ? page.month === 0 : page[view] === before(view); if (hb.hidden !== atHome) hb.hidden = atHome; hb.textContent = view === 'month' ? 'This month' : 'Tomorrow'; }
     fitHeader();
   }
   let railX = 0, suppressClick = false;
@@ -1569,6 +1571,7 @@ function mountDaybook(root, bridge = {}) {
     else if (a === 'ob-back') obBack();
     else if (a === 'ob-finish') obFinish();
     else if (a === 'setup-resume') resumeSetup();
+    else if (a === 'home') go(view === 'month' ? 0 : before(view));
     else if (a.startsWith('whom:')) settleWhom(a.slice(5));
     else if (a.startsWith('forget:')) { const q = people[Number(a.slice(7))]; if (q) { people = people.filter(v => v !== q); savePeople().catch(() => {}); render({only: 'left'}); showToast(`Forgot ${q.name}.`); } }
     else if (a.startsWith('ob-chip:')) { const t = a.slice(8); if (ob.picks.has(t)) ob.picks.delete(t); else ob.picks.add(t); b.setAttribute('aria-pressed', String(ob.picks.has(t))); }
@@ -1664,7 +1667,7 @@ function TodayPage() {
         if (!result?.created) throw new Error(result?.message || 'The event was not added.');
         return result;
       },
-      version: "0.12.5",
+      version: "0.12.6",
       latest: async () => ((await kayApi.invokeExtensionEndpoint('daybook.latest', {})) as any)?.version || '',
       loadPrefs: () => kayApi.invokeExtensionEndpoint('daybook.prefs', {}),
       loadPeople: async () => ((await kayApi.invokeExtensionEndpoint('daybook.people', {})) as any)?.people ?? [],
