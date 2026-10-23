@@ -168,6 +168,8 @@ function mountDaybook(root, bridge = {}) {
 .db-seek{position:absolute;left:0;right:0;z-index:2;overflow:hidden;border-radius:10px;border:1px dashed color-mix(in srgb,var(--db-ink) 38%,transparent);background:color-mix(in srgb,var(--db-ink) 5%,transparent);pointer-events:none;animation:db-ob-arrive .4s var(--db-ease) both}
 .db-seek span{position:absolute;top:6px;left:10px;font-size:11.5px;color:var(--db-ink-2)}.db-seek b{font-weight:600}
 .db-seekchip{border-style:dashed!important;opacity:.85}
+.db-moss{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}.db-moss img{position:absolute;display:block;user-select:none;-webkit-user-drag:none}
+@media(max-width:860px){.db-moss{display:none}}
 .db-sky{--sky-ink:rgba(32,44,39,.8);--sky-clay:#cf8a6a;--sky-sage:#a9b8a3;--sky-ochre:#dcb978;--sky-paper:#fbfaf6;position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;color:var(--sky-ink)}
 .db-sky.dark{--sky-ink:rgba(239,243,233,.78);--sky-clay:#b5745a;--sky-sage:#7f9079;--sky-ochre:#b89a5e;--sky-paper:#dcd6c8}
 .db-bird{position:absolute;width:calc(var(--bw)*var(--s,1));height:auto;opacity:.6;overflow:visible;animation:db-bird-fly var(--dur) linear var(--delay) infinite}
@@ -260,12 +262,59 @@ function mountDaybook(root, bridge = {}) {
   const sky = document.createElement('div'); sky.className = 'db-sky'; sky.setAttribute('aria-hidden', 'true');
   if (getComputedStyle(root).position === 'static') root.style.position = 'relative';
   root.append(sky);
+  // ---- Sheet moss: a few realistic clumps, only at the corners and the far left edge of Today ----
+  const mossLayer = document.createElement('div'); mossLayer.className = 'db-moss'; mossLayer.setAttribute('aria-hidden', 'true'); root.append(mossLayer);
+  function mossSVG(seed, w, h, dark){
+    let r = seed * 9301 + 49297; const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+    const S = n => (seed * 13 + n * 7) % 997 + 1;
+    // A lobed outline: several overlapping mounds inside the clump's footprint.
+    const n = 5 + Math.floor(rnd() * 3), blobs = [];
+    for (let k = 0; k < n; k++) { const a = rnd() * Math.PI * 2, d = rnd() * 0.42; const rx = w * (0.16 + rnd() * 0.12), ry = h * (0.17 + rnd() * 0.13); blobs.push(`<ellipse cx="${(w / 2 + Math.cos(a) * d * w * 0.5).toFixed(1)}" cy="${(h / 2 + Math.sin(a) * d * h * 0.45).toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}"/>`); }
+    const tint = dark ? '0.26 0 0 0 0.11  0.28 0 0 0 0.15  0.14 0 0 0 0.07  0 0 0 0 1' : '0.36 0 0 0 0.18  0.37 0 0 0 0.23  0.19 0 0 0 0.10  0 0 0 0 1';
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+  <defs>
+  <filter id="m" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency="${(14 / Math.max(w, h)).toFixed(4)}" numOctaves="3" seed="${S(1)}" result="lump"/>
+  <feDisplacementMap in="SourceGraphic" in2="lump" scale="${Math.round(Math.min(w, h) * 0.22)}" xChannelSelector="R" yChannelSelector="G" result="blob"/>
+  <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="${S(2)}" result="fray"/>
+  <feDisplacementMap in="blob" in2="fray" scale="4" xChannelSelector="R" yChannelSelector="G" result="shape"/>
+  <feTurbulence type="fractalNoise" baseFrequency="0.5 0.36" numOctaves="5" seed="${S(3)}" result="grain"/>
+  <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="${S(5)}" result="mottle"/>
+  <feComposite in="grain" in2="mottle" operator="arithmetic" k2="0.72" k3="0.38" k4="-0.08" result="mixed"/>
+  <feColorMatrix in="mixed" type="matrix" values="${tint}" result="tint"/>
+  <feGaussianBlur in="shape" stdDeviation="${(Math.min(w, h) * 0.09).toFixed(1)}" result="dome"/>
+  <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="4" seed="${S(4)}" result="bump"/>
+  <feComposite in="dome" in2="bump" operator="arithmetic" k2="1" k3="0.45" result="height"/>
+  <feDiffuseLighting in="height" surfaceScale="6" diffuseConstant="1.1" lighting-color="${dark ? '#c4ceac' : '#f6f7e2'}" result="light"><feDistantLight azimuth="225" elevation="48"/></feDiffuseLighting>
+  <feComposite in="tint" in2="light" operator="arithmetic" k1="1.45" k2="0.05" result="lit"/>
+  <feComposite in="lit" in2="shape" operator="in" result="moss"/>
+  <feGaussianBlur in="shape" stdDeviation="3" result="soft"/>
+  <feOffset in="soft" dy="3" result="drop"/>
+  <feColorMatrix in="drop" type="matrix" values="0 0 0 0 0.12  0 0 0 0 0.11  0 0 0 0 0.06  0 0 0 0.28 0" result="shadow"/>
+  <feMerge><feMergeNode in="shadow"/><feMergeNode in="moss"/></feMerge>
+  </filter></defs>
+  <g fill="#000" filter="url(#m)">${blobs.join('')}</g></svg>`;
+  }
+  const MOSS_SPOTS = [
+    {seed: 23, w: 100, h: 80, css: 'left:-46px;top:-48px', rot: -8},
+    {seed: 11, w: 150, h: 110, css: 'right:-50px;top:-46px', rot: 12},
+    {seed: 3, w: 170, h: 110, css: 'left:-52px;bottom:-48px', rot: 6},
+    {seed: 7, w: 124, h: 86, css: 'right:-38px;bottom:-48px', rot: -10},
+    {seed: 19, w: 104, h: 150, css: 'left:-60px;top:38%', rot: 4},
+    {seed: 29, w: 78, h: 96, css: 'left:-44px;top:69%', rot: -6},
+  ];
+  let mossDark = null;
+  function paintMoss(dark){
+    if (mossDark === dark && mossLayer.childElementCount) return;
+    mossDark = dark;
+    mossLayer.innerHTML = MOSS_SPOTS.map(m => `<img alt="" src="data:image/svg+xml,${encodeURIComponent(mossSVG(m.seed, m.w, m.h, dark))}" style="${m.css.replace(/(-?\d+)px/g, (x, n) => `calc(${n}px*var(--s,1))`)};width:calc(${m.w}px*var(--s,1));height:calc(${m.h}px*var(--s,1));transform:rotate(${m.rot}deg)">`).join('');
+  }
   let scale = 1;
   function applyScale(){
     const r = shell.getBoundingClientRect(), w = r.width || innerWidth, h = r.height || innerHeight, raw = Math.min(w / 1240, h / 800);
     const next = Math.round(Math.max(1, Math.min(1.5, 1 + (raw - 1) * .85)) * 100) / 100;
     if (next === scale && shell.style.getPropertyValue('--s')) return false;
-    scale = next; shell.style.setProperty('--s', String(next)); sky.style.setProperty('--s', String(next)); return true;
+    scale = next; shell.style.setProperty('--s', String(next)); sky.style.setProperty('--s', String(next)); mossLayer.style.setProperty('--s', String(next)); return true;
   }
   applyScale();
   const rr = (a, b) => a + Math.random() * (b - a);
@@ -453,7 +502,7 @@ function mountDaybook(root, bridge = {}) {
     shell.querySelectorAll('[data-action^="theme:"],[data-action^="ob-look:"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.action.split(':')[1] === t)));
   }
   function applyTheme(){
-    const d = isDark(); shell.classList.toggle('dark', d); sky.classList.toggle('dark', d);
+    const d = isDark(); shell.classList.toggle('dark', d); sky.classList.toggle('dark', d); paintMoss(d);
     if (bridge.textures) { const tx = d ? bridge.textures.dark : bridge.textures.light; shell.style.setProperty('--db-band', `url("${tx.band}")`); shell.style.setProperty('--db-band-soft', `url("${tx.soft}")`); }
   }
   function startOverClick(btn){
@@ -1525,7 +1574,7 @@ function mountDaybook(root, bridge = {}) {
     else if (!data) refresh();
     render(); schedulePoll(); checkLatest();
   });
-  return { setServices(list){ const had = anyCalendar(); services = list; if (!had && anyCalendar() && !data && booted) refresh(); else render(); }, setPerson(){ }, update(next){ data = next; render(); }, dispose(){ disposed = true; clearInterval(skyTimer); clearInterval(obTickTimer); clearTimeout(obTimer); clearTimeout(toastTimer); clearInterval(tick); cancelAnimationFrame(anim); ro?.disconnect(); scheme?.disconnect(); document.removeEventListener('selectionchange', placeBubble); root.replaceChildren(); } };
+  return { setServices(list){ const had = anyCalendar(); services = list; if (!had && anyCalendar() && !data && booted) refresh(); else render(); }, setPerson(){ }, update(next){ data = next; render(); }, dispose(){ disposed = true; mossLayer.remove(); clearInterval(skyTimer); clearInterval(obTickTimer); clearTimeout(obTimer); clearTimeout(toastTimer); clearInterval(tick); cancelAnimationFrame(anim); ro?.disconnect(); scheme?.disconnect(); document.removeEventListener('selectionchange', placeBubble); root.replaceChildren(); } };
 }
 
 function TodayPage() {
@@ -1564,7 +1613,7 @@ function TodayPage() {
         if (!result?.created) throw new Error(result?.message || 'The event was not added.');
         return result;
       },
-      version: "0.11.3",
+      version: "0.12.0",
       latest: async () => ((await kayApi.invokeExtensionEndpoint('daybook.latest', {})) as any)?.version || '',
       loadPrefs: () => kayApi.invokeExtensionEndpoint('daybook.prefs', {}),
       loadPeople: async () => ((await kayApi.invokeExtensionEndpoint('daybook.people', {})) as any)?.people ?? [],
