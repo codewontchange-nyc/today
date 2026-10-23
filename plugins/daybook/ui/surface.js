@@ -307,56 +307,18 @@ export function mountDaybook(root, bridge = {}) {
 <feDiffuseLighting in="height" surfaceScale="5" diffuseConstant="1.1" lighting-color="${dark ? '#c4ceac' : '#f6f7e2'}" result="light"><feDistantLight azimuth="225" elevation="48"/></feDiffuseLighting>
 <feComposite in="tint" in2="light" operator="arithmetic" k1="1.45" k2="0.05" result="lit"/>
 <feComposite in="lit" in2="shape" operator="in" result="moss"/>
-<feGaussianBlur in="shape" stdDeviation="3.4" result="soft"/><feOffset in="soft" dx="2.4" dy="1.4" result="drop"/>
-<feColorMatrix in="drop" type="matrix" values="0 0 0 0 0.16  0 0 0 0 0.16  0 0 0 0 0.10  0 0 0 0.13 0" result="shadow"/>
+<feGaussianBlur in="shape" stdDeviation="2" result="soft"/><feOffset in="soft" dx="2" dy="1" result="drop"/>
+<feColorMatrix in="drop" type="matrix" values="0 0 0 0 0.12  0 0 0 0 0.11  0 0 0 0 0.06  0 0 0 0.24 0" result="shadow"/>
 <feMerge><feMergeNode in="shadow"/><feMergeNode in="moss"/></feMerge></filter></defs>
 <path d="M-12,-4 L${pts.join(' L')} L-12,${H + 4} Z" fill="#000" filter="url(#s)"/></svg>`;
-  }
-  // Torn rice paper under the moss: a nearly straight tear, a fringe of loose fibers, a faint fibrous surface and a soft shadow.
-  function paperStripSVG(H, k, dark){
-    const PW = 40 * k, W = Math.round(PW + 26 * k), pts = [];
-    let r = 7717; const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
-    const ph = rnd() * 6;
-    for (let y = 0; y <= H; y += 10) pts.push(`${(PW + 1.6 * k * Math.sin(y / 140 + ph) + 0.9 * k * Math.sin(y / 47) + rnd() * 0.8 * k).toFixed(1)},${y}`);
-    const paper = dark ? '#e4e0d6' : '#fefefb';
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" preserveAspectRatio="none"><defs>
-<filter id="p" x="-5%" y="-1%" width="130%" height="102%" color-interpolation-filters="sRGB">
-<feTurbulence type="fractalNoise" baseFrequency="0.05 0.18" numOctaves="3" seed="41" result="tear"/>
-<feDisplacementMap in="SourceGraphic" in2="tear" scale="${(5 * k).toFixed(1)}" xChannelSelector="R" yChannelSelector="G" result="t1"/>
-<feTurbulence type="fractalNoise" baseFrequency="0.9 0.5" numOctaves="2" seed="43" result="fine"/>
-<feDisplacementMap in="t1" in2="fine" scale="1.8" xChannelSelector="R" yChannelSelector="G" result="shape"/>
-<feMorphology in="shape" operator="dilate" radius="${(2.6 * k).toFixed(1)}" result="grown"/>
-<feComposite in="grown" in2="shape" operator="out" result="ring"/>
-<feTurbulence type="fractalNoise" baseFrequency="0.035 0.9" numOctaves="3" seed="47" result="streak"/>
-<feColorMatrix in="streak" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 9 -4.6" result="fiberMask"/>
-<feComposite in="ring" in2="fiberMask" operator="in" result="fibersA"/>
-<feFlood flood-color="${paper}" flood-opacity="0.78" result="fiberInk"/>
-<feComposite in="fiberInk" in2="fibersA" operator="in" result="fibers"/>
-<feMorphology in="shape" operator="erode" radius="${(1.6 * k).toFixed(1)}" result="body"/>
-<feComposite in="shape" in2="body" operator="out" result="lip"/>
-<feTurbulence type="fractalNoise" baseFrequency="0.6 0.08" numOctaves="3" seed="53" result="grain"/>
-<feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.05 0.05 0.05 0 -0.07" result="grainShade"/>
-<feFlood flood-color="${paper}" result="ink"/>
-<feComposite in="ink" in2="body" operator="in" result="sheet"/>
-<feComposite in="grainShade" in2="body" operator="in" result="texture"/>
-<feFlood flood-color="${paper}" flood-opacity="0.86" result="lipInk"/>
-<feComposite in="lipInk" in2="lip" operator="in" result="edge"/>
-<feGaussianBlur in="shape" stdDeviation="${(3.2 * k).toFixed(1)}" result="soft"/><feOffset in="soft" dx="${(2.2 * k).toFixed(1)}" dy="1" result="drop"/>
-<feColorMatrix in="drop" type="matrix" values="0 0 0 0 0.1  0 0 0 0 0.09  0 0 0 0 0.06  0 0 0 ${dark ? 0.32 : 0.16} 0" result="shadow"/>
-<feGaussianBlur in="shape" stdDeviation="0.8" result="tight"/><feOffset in="tight" dx="0.8" result="tdrop"/>
-<feColorMatrix in="tdrop" type="matrix" values="0 0 0 0 0.1  0 0 0 0 0.09  0 0 0 0 0.06  0 0 0 ${dark ? 0.3 : 0.12} 0" result="contact"/>
-<feMerge><feMergeNode in="shadow"/><feMergeNode in="contact"/><feMergeNode in="sheet"/><feMergeNode in="texture"/><feMergeNode in="edge"/><feMergeNode in="fibers"/></feMerge>
-</filter></defs>
-<path d="M-12,-6 L${pts.join(' L')} L-12,${H + 6} Z" fill="#000" filter="url(#p)"/></svg>`;
   }
   let mossDark = null, mossH = 0, mossTimer = 0;
   function paintMoss(dark, force){
     const H = Math.round(mossLayer.clientHeight || root.clientHeight || 0);
     if (!force && mossDark === dark && mossLayer.childElementCount && Math.abs(H - mossH) < 24) return;
     mossDark = dark; mossH = H;
-    const paper = H > 200 ? `<img class="db-paper-strip" alt="" src="data:image/svg+xml,${encodeURIComponent(paperStripSVG(H, scale, dark))}" style="left:0;top:0;bottom:0;width:${Math.round(66 * scale)}px;height:100%">` : '';
     const strip = H > 200 ? `<img class="db-moss-strip" alt="" src="data:image/svg+xml,${encodeURIComponent(mossStripSVG(H, scale, dark))}" style="left:0;top:0;bottom:0;width:${Math.round(48 * scale)}px;height:100%">` : '';
-    mossLayer.innerHTML = paper + strip + MOSS_SPOTS.map(m => `<img alt="" src="data:image/svg+xml,${encodeURIComponent(mossSVG(m.seed, m.w, m.h, dark))}" style="${m.css.replace(/(-?\d+)px/g, (x, n) => `calc(${n}px*var(--s,1))`)};width:calc(${m.w}px*var(--s,1));height:calc(${m.h}px*var(--s,1));transform:rotate(${m.rot}deg)">`).join('');
+    mossLayer.innerHTML = strip + MOSS_SPOTS.map(m => `<img alt="" src="data:image/svg+xml,${encodeURIComponent(mossSVG(m.seed, m.w, m.h, dark))}" style="${m.css.replace(/(-?\d+)px/g, (x, n) => `calc(${n}px*var(--s,1))`)};width:calc(${m.w}px*var(--s,1));height:calc(${m.h}px*var(--s,1));transform:rotate(${m.rot}deg)">`).join('');
   }
   let scale = 1;
   function applyScale(){
