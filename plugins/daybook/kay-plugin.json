@@ -2,7 +2,7 @@
   "protocol": "kay.plugin.v1",
   "id": "com.cam.daybook",
   "displayName": "Today",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Your calendars in one calm view: today in focus, the days ahead prepared, and an agent that turns a passing thought into a plan.",
   "icon": "./store-icon.svg",
   "namespace": "daybook",
