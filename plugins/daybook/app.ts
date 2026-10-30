@@ -63,7 +63,7 @@ export default function activate(app: any) {
     return out;
   };
   // Tell Today's interface the moment something finishes in the background.
-  const notify = (kind: string, extra: any = {}) => { try { app.events?.publish?.('updated', { kind, at: new Date().toISOString(), ...extra }); } catch {} };
+  const notify = (kind: string, extra: any = {}) => { try { app.events?.publish?.('updated', { uri: 'daybook://today', payload: { kind, at: new Date().toISOString(), ...extra } }); } catch {} };
   let refreshTimer: any = null;
   const refreshSoon = (ms = 1500) => { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => { fetchSnapshot().catch(() => {}); }, ms); };
   const fetchSnapshot = async () => {

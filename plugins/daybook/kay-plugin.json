@@ -2,12 +2,12 @@
   "protocol": "kay.plugin.v1",
   "id": "com.cam.daybook",
   "displayName": "Today",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Your calendars in one calm view: today in focus, the days ahead prepared, and an agent that turns a passing thought into a plan.",
   "icon": "./store-icon.svg",
   "namespace": "daybook",
   "compatibility": {
-    "sdk": "^0.13.7"
+    "sdk": "^0.16.0"
   },
   "storage": {
     "sqlite": {
@@ -180,6 +180,7 @@
               "displayName": "Today updated",
               "description": "Research, briefs or the calendar finished updating in the background.",
               "version": 1,
+              "uriScheme": "daybook",
               "payloadSchema": {
                 "type": "object",
                 "properties": {
