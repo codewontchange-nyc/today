@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "today",
   "description": "Today for Bonsai: your calendars in one calm view, with the days ahead prepared by your agent.",
-  "generatedAt": "2026-11-06T16:41:41.307Z",
+  "generatedAt": "2026-11-06T18:00:05.242Z",
   "categories": [
     {
       "id": "planning",
@@ -18,19 +18,19 @@
       "displayName": "Today",
       "description": "Your calendars in one calm view: today in focus, the days ahead prepared, and an agent that turns a passing thought into a plan.",
       "category": "planning",
-      "version": "0.14.2",
+      "version": "0.14.3",
       "sdk": ">=0.16.0",
       "targets": [
         "app",
         "ui"
       ],
-      "commit": "35a44c5b42192f728624d67e1719ed5b13a21ac5",
+      "commit": "59c78c1b99ff20cf875af83699433397e885bd49",
       "creator": "codewontchange-nyc",
       "contributors": [
         "codewontchange-nyc"
       ],
       "metadata": {},
-      "digest": "sha256:e4bb5300fc89b2cc3f2f6df2dc43fa801a4feab8de7b9c595979ca1458b156c7"
+      "digest": "sha256:061051cdc17c2e2a1aabed922c09c828d6f4432012152cbd063ee0e8341bb489"
     }
   ]
 }

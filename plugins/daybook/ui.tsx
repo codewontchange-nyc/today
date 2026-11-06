@@ -1888,9 +1888,31 @@ function TodayPage() {
   return React.createElement('div', {ref: root, style: {height: '100%', minHeight: 0, overflow: 'hidden', background: 'var(--color-bg-base)', color: 'var(--color-text-primary)'}});
 }
 const icon = {svg: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3.25\" y=\"4.75\" width=\"17.5\" height=\"16\" rx=\"3.5\"/><path d=\"M8 3v3.5M16 3v3.5\"/><path d=\"M9.1 17.6h5.8c.9 0 1.6-.5 1.6-1.15s-.7-1.15-1.6-1.15H9.1c-.9 0-1.6.5-1.6 1.15s.7 1.15 1.6 1.15Z\"/><path d=\"M10.2 15.1h3.6c.7 0 1.2-.42 1.2-.95s-.5-.95-1.2-.95h-3.6c-.7 0-1.2.42-1.2.95s.5.95 1.2.95Z\"/><path d=\"M11.3 12.9h1.4c.45 0 .8-.32.8-.7s-.35-.7-.8-.7h-1.4c-.45 0-.8.32-.8.7s.35.7.8.7Z\"/></svg>"};
+// Every function the slots API exposes, own or inherited. Bonsai's slot registry may be a class instance or a proxy.
+function slotNames(slots: any): string[] {
+  const out = new Set<string>();
+  try { for (let o = slots; o && o !== Object.prototype; o = Object.getPrototypeOf(o)) for (const k of Object.getOwnPropertyNames(o)) { try { if (typeof slots[k] === 'function') out.add(k); } catch {} } } catch {}
+  return [...out];
+}
+// Put Today on the far-left rail. Bonsai 1.9 (SDK 0.16) wanted registerSidebarItem with placement 'activityRail';
+// SDK 0.42 no longer recognises that value and files the item under Workspace instead. Rather than pin one
+// SDK's vocabulary, look for a rail-flavoured registration first, then for the placement names the SDK's own
+// registerSidebarItem mentions, and only then fall back to a plain 'rail'.
+function placeOnRail(api: any, item: any) {
+  const slots = api.slots || {};
+  const names = slotNames(slots);
+  const railFn = names.find(n => /^register\w*(rail|activity|nav)/i.test(n));
+  let src = '';
+  try { src = Function.prototype.toString.call(slots.registerSidebarItem); } catch {}
+  const literals = [...new Set([...src.matchAll(/["'`]([a-z][a-z-]*rail[a-z-]*)["'`]/gi)].map(m => m[1]))];
+  const placement = literals.find(l => l !== 'activityRail') || literals[0] || 'rail';
+  try { console.info('[Today] sidebar slots:', names.join(', ') || '(none)', '| placement literals:', literals.join(', ') || '(none)', '| using:', railFn || `registerSidebarItem placement=${placement}`); } catch {}
+  if (railFn) { try { return slots[railFn]({...item, placement}); } catch {} }
+  return slots.registerSidebarItem({...item, placement});
+}
 export default function activate(api: any) {
   UI_API = api;
   const page = api.slots.registerPage({id: 'daybook', title: 'Today', icon}, TodayPage);
-  const rail = api.slots.registerSidebarItem({id: 'daybook-rail', title: 'Today', pageId: 'daybook', placement: 'activityRail', icon, order: 60});
-  return {dispose() { rail.dispose(); page.dispose(); }};
+  const rail = placeOnRail(api, {id: 'daybook-rail', title: 'Today', pageId: 'daybook', icon, order: 60});
+  return {dispose() { try { rail?.dispose?.(); } catch {} page.dispose(); }};
 }
